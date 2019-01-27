@@ -7,12 +7,10 @@
 #include <errno.h> 
 #include <sys/wait.h>
 extern int errno; 
-
 #define MAX_ARGS 50
+
 int main()
-{
-	int l=0;
-    
+{    
 	while(1)
 	{	
 		char *args[MAX_ARGS];
@@ -24,8 +22,8 @@ int main()
 		// the regex implies to take a charcater sring as input until encountered by a new line
 		scanf("%[^\n]%*c",c);
         char *copy = strdup(c); 
-        // printf("%s",c);
-		// exit loop when encountered with exit
+
+		// exit loop when encountered with quit
 		if(strcmp(c,"quit")==0)
 		{
 			break;
@@ -35,7 +33,7 @@ int main()
         int out_redirect=0,pipecount=0;
         char infile[20],outfile[20];
         int in=0, out=0,fd,fd1,count=0;
-        int saved_stdout,saved_stdin,background=0;
+        int saved_stdout,saved_stdin;
         saved_stdout = dup(1);
         saved_stdin = dup(0);
 
@@ -78,8 +76,7 @@ int main()
                     j++;
                 while (subtoken != NULL)
                 { 
-                    // fprintf(stderr, "file output redirec\n");
-                    // fprintf(stderr, "subtoken: %s\n", subtoken);
+                    //fprintf(stderr, "file output redirec\n");
                     if(in_redirect==1)
                     {
                         fd = open(subtoken,O_RDONLY );
@@ -88,84 +85,69 @@ int main()
                             printf("Error Number % d\n", errno);  
                             perror("Program");                  
                         }
-
-                        saved_stdin = STDIN_FILENO;
                         dup2(fd, 0);
                         in_redirect=0;
                     }                    
                     else if(out_redirect==1)
                     {
-                        fprintf(stderr, "file output redirec\n");
-                        fd1 = open(subtoken, O_WRONLY| O_CREAT, 0664);
+                        // //fprintf(stderr, "file output redirec\n");
+                        fd1 = open(subtoken, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
                         if (fd1 ==-1) 
                         {
                             printf("Error Number % d\n", errno);  
                             perror("Program");                  
                         }
-                        saved_stdout = STDOUT_FILENO;
                         dup2(fd1, 1);
                         out_redirect=0;
                     }
                     else
                     {
-                        // fprintf(stderr, "%s\n", subtoken);
+                        // //fprintf(stderr, "%s\n", subtoken);
                         *next++ = subtoken;
                     }
 
-                    // int j = subtoken- end_str+ strlen(subtoken);
                     j = j+ strlen(subtoken); 
-                    fprintf(stderr, "j,copy1: %d %d\n", j, strlen(copy1));
+                    //fprintf(stderr, "j,copy1: %d %d\n", j, strlen(copy1));
                     while(j<strlen(copy1) && strchr(de,copy1[j])!=NULL)
                     {
-                        fprintf(stderr, "%d\n", j);
+                        //fprintf(stderr, "%d\n", j);
                         if(copy1[j]=='<')
                         {
-                            fprintf(stderr, "in redirect\n");
+                            //fprintf(stderr, "in redirect\n");
                             in_redirect=1;
-                            // break;
                         }
                         else if(copy1[j]=='>')
                         {
-                            fprintf(stderr, "out redirect\n");
+                            //fprintf(stderr, "out redirect\n");
                             out_redirect=1;
-                            // break;
                         }
                         j++;
                     }        
                     
                     subtoken = strtok_r(NULL, de, &token);
-                    // printf("lag\n");
                 } 
 
                 *next = NULL;
                 int pid;
-                // printf(" gap\n"); 
+
                 if((pid=fork())==0)
                 {
                     if(count==0)
                     {
-                        saved_stdout = dup(1);                        
                         dup2(p[0][1], 1);
                         close(p[0][1]); 
                         
                     }
                     else if(count==pipecount)
-                    {
-                        saved_stdin = dup(0);                        
+                    {                     
                         dup2(p[pipecount-1][0], 0); 
-                        close(p[pipecount-1][0]);
-                        
+                        close(p[pipecount-1][0]);                        
                     }
                     else
-                    {
-                        saved_stdin = dup(0);
-                        
+                    {                     
                         dup2(p[count-1][0], 0);
                         dup2(p[count][1], 1); 
-                        close(p[count-1][1]);
-                        
-                        saved_stdout = dup(1);
-                        
+                        close(p[count-1][1]);                                                
                         close(p[count][0]);
                     }
 
@@ -179,8 +161,7 @@ int main()
                 else 
                 {
                     if(!bk)
-                    {
-                        
+                    {                        
                         // perror("execvp"); 
                         waitpid(pid, NULL, 0); 
                         if(count!=pipecount)
@@ -197,18 +178,18 @@ int main()
                         }
                     }                   
                 }
-                
-                count++;
-                // printf(" gap\n");               
+                count++;          
                 token = strtok_r(NULL, "|&", &end_str);
             }
 
+            close(fd);
+            close(fd1);
             dup2(saved_stdout, 1);
             close(saved_stdout);
             dup2(saved_stdin, 0);
             close(saved_stdin); 
-
         }
+
         else
         {
     	    //loop for seperating the string into executable file name and arguments
@@ -223,27 +204,22 @@ int main()
                         printf("Error Number % d\n", errno);  
                         perror("Program");                  
                     }
-
-                    saved_stdin = dup(0);
                     dup2(fd, 0);
                     in_redirect=0;
                 }                
                 else if(out_redirect==1)
                 {
-                    fd1 = open(token, O_WRONLY| O_CREAT, 0664);
+                    fd1 = open(token, O_WRONLY| O_CREAT|O_TRUNC, S_IRWXU);
                     if (fd1 ==-1) 
                     {
                         printf("Error Number % d\n", errno);  
                         perror("Program");                  
                     }
-                    saved_stdout = dup(1);
                     dup2(fd1, 1);
                     out_redirect=0;
-
                 }
                 else        
                 {
-                    // fprintf(stderr, "%s\n", token);
                     *next++ = token;
                 }
                 int j = token-c+strlen(token);
@@ -262,8 +238,7 @@ int main()
                     }
                     if(copy[j]=='&')
                     {
-                        printf("background\n");
-                        background=1;
+                        bk=1;
                         break;
                     }
                     j++;
@@ -271,7 +246,6 @@ int main()
                 
                 token = strtok(NULL, " ><|&");
             } 
-    	    //printf("\n\n");
     	    *next = NULL;
             int pid;
             pid = fork();
@@ -291,16 +265,16 @@ int main()
                 
                 exit(0);
     		}
-            else if(!background)
+            else if(!bk)
             {
                 wait(NULL);
             }
-
+            close(fd);
+            close(fd1);
             dup2(saved_stdout, 1);
             close(saved_stdout);
             dup2(saved_stdin, 0);
-            close(saved_stdin);
-            
+            close(saved_stdin);            
         }
         
 	}

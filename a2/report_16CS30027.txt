@@ -1,0 +1,54 @@
+Name: Potnuru Anusha
+Rollno: 16CS30027
+Group: 1
+
+
+Language used: C
+Implemented a shell which takes user commands one line at a time
+
+
+The string is taken as input until a newline is encountered.
+It is then searched for '|'(pipe) and '&'(background process) and the pipe process, 
+background flags and pipe count are set accordingly.
+
+If there is a pipe(pipe process flag=1):
+# Each part separated by a pipe is a command.
+
+	Pipe count number of pipes are created using 2-D array.
+
+	The string is first tokenised using '|' and '&' as delimiters in strtok_r function.
+	For each token of above(command):
+		It is again tokenised using delimiters ' ', '<' and '>' to set the corresponding 
+		input and output file descriptors. If there is a '<', next token is opened 
+		and it's file descriptor is duplicated to stdin and std. And there is a '>', next 
+		token is opened and it's file descriptor is duplicated to stdout.
+
+		And a child process is forked and for first command only first pipe's 
+		write end is duplicated to stdout.
+
+		For last command, only last pipe's read end is duplicated to stdin.
+
+		For in between commands(n-th), (n-1)-th pipe's read end is duplicated to stdin and
+		n-th pipe's write end is duplicated to stdout.
+
+		Finally, execvp is executed on these arguments.
+
+		If it is not a background process, parent process waits on child's pid 
+		and closes any pipes left open after child terminates.
+		Else if it is a background process, parent doesn't wait for child termination.
+
+If there is no pipe:
+	
+	The string is tokenised using ' ', '<', '>' and '&' as delimiters in strtok function
+	and the input and output file descriptors are set accordingly.
+
+	A child process is forked and execvp is executed on these arguments.
+
+	If it is not a background process, parent waits on child's pid until it terminates.
+	Else if it is not a background process, parent doesn't wait for child.
+
+Finally, stdin and stdout are restored back after completion of each user command.
+
+
+
+
