@@ -1,0 +1,51 @@
+Name: Potnuru Anusha
+Group : 1
+Language used: C++
+
+IMPLEMENTATION:
+n - total number of threads
+topt - count of running producer threads
+curr_thr - index of running thread, this is incremented(modulo topt) for every 1 second time quantum in 
+			scheduler.
+bcount - number of elements in buffer
+
+Signals: 
+SIGUSR1 is used to keep a thread in sleep by using pause() call.
+SIGUSR2 is used to keep wake up a thread, just passing the signal is sufficient, as a thread wakes up 
+from pause call if any signal is passed.
+
+PRODUCER THREAD:
+Thousand random integers are produced, and the threads exits after producing 1000 numbers.
+It is kept in wait when the buffer is full if buffer count is equal to max capacity minus 1.
+
+CONSUMER THREAD:
+It keeps consuming the numbers in buffer, and the buffer count is decreased accordingly.
+It is kept in wait when the buffer is empty(when buffer count is equal to zero).
+
+SCHEDULER:
+It runs while count of running producer threads is not zero and number of elements in buffer is also not zero.
+Checks the curr_thr, if it is not terminated, the curr_thr is waked up, and run for 1 second quantum, and 
+if it is not terminated in between, then it is put to sleep.
+It exits, printing it's exit time.
+
+REPORTER:
+It runs while count of running producer threads is not zero and number of elements in buffer is also not zero, 
+that is as along as, scheduler runs.
+Flags:
+flag_terminated: is one if a process terminates, and process index is stored in terminated_thread
+flag_resumed: is one if a process is resumed, and process index is stored in resumed_thread
+flag_suspended: is one if a process is suspened, and process index is stored in suspended_thread
+
+The status of all threads is stored in old_status array.
+It checks if the the status of any thread varies from it's value in old_status, and if it is changed then 
+the context-switch and other exit information is printed using the flags.
+And after storing the details and flag information, the old_status value of that thread is set to it's new
+status value.
+
+MAIN FUNCTION:
+In a loop of n, random integer x(0 or 1) is generated. If x is one, then a producer thread is generated, else
+a consumer thread is generated.
+pthread_join is used on scheduler and reporter threads to complete.
+
+
+

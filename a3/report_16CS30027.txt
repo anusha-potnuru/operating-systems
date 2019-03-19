@@ -1,0 +1,55 @@
+Name: Potnuru Anusha
+Rollno: 16CS30027
+Group: 1
+
+
+Language used: C++
+Implemented various scheduling algorithms and compared their averages for different values of N
+
+
+Turn around time for a process would be the difference between current time(when it got completed)
+and it's arrival time.
+
+Function print(p, n): Prints all process ids in the queue. n is used as in nonpremptive 
+Shortest job first, premptive shortest job first, we used the same p, to hold the queue(in-place).
+
+Processes are stored as variable p which is a vector< pair<int, pair<int, int> > > i.e. for each process 
+id, a pair of numbers, arrival time and cpu burst time are stored.
+
+FCFS: 
+Variables: t - time, tat - turn around time
+Turn around time is simply sum for each process executed arrival time wise.
+
+Nonpremptive Shortest job first:
+Variables: t - time, tat - turn around time, j - index till where processes in p are job queue.
+Until all processes complete, after each process completes, j is recomputed, and all processes till index j 
+are sorted based on their cpu burst time. 
+And the first one having least burst time is executed next.
+
+Preemptive Shortest job first:
+Variables: time - time, tat - turn around time, j - index till where processes in p are job queue.
+next_arr: stores the least arrival time of process coming next into queue
+prev_begin: stores the time at which previous process began, used to add to turn around time for a 
+process which is pulled out from cpu
+
+Roundrobin:
+Variables: time - time, tat - turn around time, j - number of processes in job queue,
+next_arr- stores the least arrival time of process coming next into queue,
+delta=2, q - process queue, updated after every time quantum
+k - index used to insert processes into job queue after time quantum(g is temporary used in process)
+
+Highest response ratio next:
+Variables: t - time, tat - turn around time, j - index till where processes in p are job queue.
+Method is same as Nonpremptive Shortest job first, except that processes in job queue are sorted based on 
+response ratio instead of cpu burst time as in nonpremptive shortest job first
+
+Plot:
+Python script is used to generate the plot. Libraries os, subprocess and matplotlib are used.
+
+FCFS Test:
+Lower bound would be in the case when the next process arrives when the previous one completes, 
+as there would not be any process waiting. And the lower bound is the sum of all CPU burst times.
+It is tested if the randomly generated jobs satisfy the condition.
+
+
+

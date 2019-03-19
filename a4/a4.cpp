@@ -12,12 +12,12 @@ int in,out;
 int n,totp,curr_thr;
 
 void signal_sleep(int signum){
-	signal(SIGUSR1,signal_sleep);		// Signal to put a thread to sleep
+	// signal(SIGUSR1,signal_sleep);	// Signal to put a thread to sleep
 	pause();
 }
 
 void signal_wake(int signum){
-	signal(SIGUSR2,signal_wake);	  // Signal to wake up a thread
+	// signal(SIGUSR2,signal_wake);		// Signal to wake up a thread
 }
 
 void* produce(void* param)
@@ -25,13 +25,14 @@ void* produce(void* param)
 	long curr_thread_ind;
 	curr_thread_ind = (long)param;
 	status[curr_thread_ind] = 0;
-	signal(SIGUSR1,signal_sleep);
-	signal(SIGUSR2,signal_wake);
+	signal(SIGUSR1,signal_sleep); //installing signal handler
+	signal(SIGUSR2,signal_wake); //installing signal handler
+
 	pthread_kill(pthread_self(),SIGUSR1);
 
 	for (int i = 0; i < 1000; ++i)
 	{
-		while(bcount == M-1);
+		while(bcount == M);
 		buffer[in] = rand()%100+1;
 		in = (in+1)%M;
 		bcount++;
@@ -77,7 +78,7 @@ void *scheduler(void *param){
 	
 	while(totp || bcount)
 	{													// While total waiting threads < n
-		usleep(10);
+		usleep(20);
 		if(status[curr_thr]!=-1)
 		{			
 			pthread_kill(*((pthread_t *)param+curr_thr), SIGUSR2);		// wake up the current thread
@@ -89,7 +90,7 @@ void *scheduler(void *param){
 			{													
 				if(status[curr_thr]==-1)
 				{							
-					flag = 1;										//	Allow current thread to execute for 1 second
+					flag = 1;								//	Allow current thread to execute for 1 second
 					break;								
 				}							
 			}
@@ -98,9 +99,11 @@ void *scheduler(void *param){
 			{
 				pthread_kill(*((pthread_t *)param+curr_thr),SIGUSR1);	// if thread has not terminated then put the thread to sleep
 				status[curr_thr] = 0;
+				
 			}
 			else 
 				flag = 0;
+
 			// cout<<"Number of elements in BUFFER: "<<bcount<<endl;
 			// cout<<"in: "<<in<<" "<<"out: "<<out<<endl;
 		}
@@ -130,13 +133,15 @@ void *reporter(void *param)
 			if(status[i]!=old_status[i])
 			{// If status of any thread has changed
 
-				if(status[i]==-1 && old_status[i]==1){
+				if(status[i]==-1 && old_status[i]==1)
+				{
 					terminated_thread = i;
 					cout<<"Thread "<<terminated_thread<<" has finished"<<endl;	// keep record of terminated thread
 					flag_terminated = 1;
 				}
 				else{
-					if(status[i]==0 && old_status[i]==1){
+					if(status[i]==0 && old_status[i]==1)
+					{
 						suspended_thread = i;								// keep record of suspended thread
 						flag_suspended = 1;
 					}
@@ -194,7 +199,6 @@ void *reporter(void *param)
 	time(&rawtime);
 	cout<<"\nReporter thread exiting at time "<<ctime(&rawtime)<<endl;
 	pthread_exit(NULL);
-	
 }
 
 int main()
@@ -224,7 +228,7 @@ int main()
 		{
 			cout<<i<<" ";
 			totp++;
-			pthread_create(&worker_threads[i],&attr,produce,(void *)(size_t)i);	
+			pthread_create(&worker_threads[i], &attr ,produce,(void *)(size_t)i);	
 		}	
 		else
 			pthread_create(&worker_threads[i], &attr, consume, (void*)(size_t)i);

@@ -64,8 +64,8 @@ double np_sjf(vector< pair<int, pair<int, int> > > p)
 		p.erase(p.begin());
 		printprocessqueue(p,j-1);
 	}
-	return (double)tat/n;
 
+	return (double)tat/n;
 }
 
 double p_sjf(vector< pair<int, pair<int, int> > > p)
@@ -114,67 +114,6 @@ double p_sjf(vector< pair<int, pair<int, int> > > p)
 
 	return tat/n;	
 }
-
-
-// double roundrobin(vector< pair<int, pair<int, int> > >p)
-// {
-// 	int time=0, i=0,j=0, delta=2,k,l; 
-// 	double tat=0, next_arr;
-// 	int n = p.size();
-// 	while(!p.empty())
-// 	{
-// 		j=0;
-// 		while(j< p.size())
-// 		{
-// 			if(p[j].second.first <= time)
-// 				j++;
-// 			else
-// 				break;
-// 		}
-// 		if(j< p.size())
-// 			next_arr = p[j].second.first;
-// 		else
-// 			next_arr = 10000;
-
-		
-// 		cout<<k<<endl;
-// 		while(time < next_arr && !p.empty())
-// 		{
-
-// 			printprocessqueue(p);
-// 			if(p[0].second.second > delta)
-// 			{
-// 				time = time + delta;
-// 				p[0].second.second -= delta;
-// 				k=0;
-// 				l=0;
-// 				while( k<p.size())
-// 				{
-// 					if(l==0 && p[k].second.first == time)
-// 						l=k;
-// 					if(p[k].second.first <= time)
-// 						k++;
-// 					else
-// 						break;
-// 				}
-// 				if(!l)
-// 					rotate(p.begin(), p.begin()+1, p.begin()+l);
-// 				rotate(p.begin(), p.begin()+l, p.begin()+k);
-// 			}
-
-// 			else
-// 			{
-// 				time += p[0].second.second;
-// 				tat += time - p[0].second.first;
-// 				p.erase(p.begin());				
-// 				j--; // count till where to run round robin
-// 			}
-
-// 		}
-
-// 	}
-// 	return (double)tat/n;
-// }
 
 
 double roundrobin(vector< pair<int, pair<int, int> > >p)
