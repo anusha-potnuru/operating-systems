@@ -64,7 +64,7 @@ void myexit(int status);
 void createFreeList()
 {
 	int i;
-	freekey = ftok("master.c",56);
+	freekey = ftok("master.cpp", 56);
 	if(freekey == -1)
 	{	
 		perror("freekey");
@@ -100,7 +100,7 @@ void createFreeList()
 void createPageTables()
 {
 	int i;
-	pagetbkey = ftok("master.c",100);
+	pagetbkey = ftok("master.cpp",100);
 	if(pagetbkey == -1)
 	{	
 		perror("pagetbkey");
@@ -137,7 +137,7 @@ void createPageTables()
 
 void createMessageQueues()
 {
-	readykey = ftok("master.c",200);
+	readykey = ftok("master.cpp",200);
 	if(readykey == -1)
 	{	
 		perror("readykey");
@@ -150,7 +150,7 @@ void createMessageQueues()
 		myexit(EXIT_FAILURE);
 	}
 
-	msgq2key = ftok("master.c",300);
+	msgq2key = ftok("master.cpp",300);
 	if(msgq2key == -1)
 	{	
 		perror("msgq2key");
@@ -163,7 +163,7 @@ void createMessageQueues()
 		myexit(EXIT_FAILURE);
 	} 
 
-	msgq3key = ftok("master.c",400);
+	msgq3key = ftok("master.cpp",400);
 	if(msgq3key == -1)
 	{	
 		perror("msgq3key");
@@ -180,7 +180,7 @@ void createMessageQueues()
 void createPCBs()
 {
 	int i;
-	pcbkey = ftok("master.c",500);
+	pcbkey = ftok("master.cpp",500);
 	if(pcbkey == -1)
 	{	
 		perror("pcbkey");
@@ -211,22 +211,6 @@ void createPCBs()
 
 	int allo_frame = 0;
 	printf("tot = %d, k = %d, f=  %d\n",totpages,k,f);
-	// int max = 0,maxi = 0;
-	// for(i=0;i<k;i++)
-	// {
-	// 	ptr[i].pid = -1;
-	// 	int allo = (int)round(ptr[i].m*(f-k)/(float)totpages) + 1; // ??
-	// 	if(ptr[i].m > max)
-	// 	{
-	// 		max = ptr[i].m;
-	// 		maxi = i;
-	// 	}
-	// 	allo_frame = allo_frame + allo;// ??
-	// 	//printf("%d\n",allo);
-	// 	ptr[i].f_cnt = allo;// ??
-		
-	// }
-	// ptr[maxi].f_cnt += f - allo_frame; // ??
 
 	for(i=0;i<k;i++)
 	{
@@ -238,7 +222,6 @@ void createPCBs()
 		perror("freel-shmdt");
 		myexit(EXIT_FAILURE);
 	}
-
 }
 
 void clearResources()
@@ -279,18 +262,13 @@ void myexit(int status)
 void createProcesses()
 {
 	pcb *ptr = (pcb*)(shmat(pcbid, NULL, 0));
-	/*if(*(int *)ptr == -1)
-	{
-		perror("pcb-shmat");
-		myexit(EXIT_FAILURE);
-	}*/
 
 	int i,j;
 	for(i=0;i<k;i++)
 	{
 		int rlen = rand()%(8*ptr[i].m) + 2*ptr[i].m + 1;
 		char rstring[m*20*40]; // ?? m*10*4
-		printf("rlen = %d\n",rlen);
+		printf("Reference string length = %d\n",rlen);
 		int l = 0;
 		for(j=0;j<rlen;j++)
 		{

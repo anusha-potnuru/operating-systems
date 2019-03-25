@@ -15,7 +15,9 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-
+#include<iostream>
+#include <map>
+#include<bits/stdc++.h>
 
 #define PSEND_TYPE 10
 #define MMUTOPRO 20
@@ -25,7 +27,8 @@
 #define PAGEFAULT_HANDLED 5
 #define TERMINATED 10
 
-int count = 0;
+using namespace std;
+int global_count = 0;
 int *pffreq;
 FILE *resultf;
 int i;
@@ -68,6 +71,9 @@ struct mmutosch
 	char mbuf[1];
 };
 
+typedef	map< pair<int,int>,pair<int,int> > tlb;
+tlb tlb_table; // tlb variable
+tlb::iterator frame_it;
 
 key_t freekey, pagetbkey;
 key_t msgq2key, msgq3key;
@@ -79,6 +85,46 @@ int pcbid;
 
 
 int m,k;
+
+void insert_into_tlb(int pid, int page_no, int frame_no, int s)
+{
+	cout<<"MMU: Inserting into tlb"<<endl;
+	//If tlb is not yet full
+	if(tlb_table.size() < s)
+	{
+		// Just insert the new pair
+		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(pid,page_no),
+			pair<int,int>(frame_no, global_count));
+		tlb_table.insert(to_insert);
+	}
+	else{
+		//If tlb is full
+
+		auto lru_it = tlb_table.begin();
+		int lru_time = -1;
+
+		//Find the oldest entry
+		for(auto it = tlb_table.begin(); it != tlb_table.end();it++){
+			if( global_count - it->second.second > lru_time) {
+				lru_it = it;
+				lru_time = global_count - it->second.second;
+			}
+		}
+
+		//Erase entry from the table
+		tlb_table.erase(lru_it);
+		//Make a new table entry and insert them into the  tlb
+		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(pid,page_no),
+			pair<int,int>(frame_no,global_count));
+		tlb_table.insert(to_insert);
+	}
+}
+
+//Remove an entry form the tlb
+void remove_from_tlb(int pid,int page_no)
+{
+	tlb_table.erase(pair<int,int>(pid,page_no));
+}
 
 int readReq_from_process(int* id)
 {
@@ -197,10 +243,10 @@ int serviceMRequest()
 		notifySched(TERMINATED); // type 2 message
 		return 0;
 	}
-
-	count ++;
-	printf("Page reference : (%d,%d,%d)\n",count,id,pageno);
-	fprintf(resultf,"Page reference : (%d,%d,%d)\n",count,id,pageno);
+	int fno;
+	global_count ++;
+	printf("Page reference : (%d,%d,%d)\n",global_count,id,pageno);
+	fprintf(resultf,"Page reference : (%d,%d,%d)\n",global_count,id,pageno);
 	if (pcbptr[id].m < pageno || pageno < 0)
 	{
 		printf("Invalid Page Reference : (%d %d)\n",id,pageno);
@@ -214,25 +260,36 @@ int serviceMRequest()
 	}
 	else
 	{
-		if (ptbptr[i * m + pageno].isvalid == 0)
-		{
-			//PAGE FAULT
-			printf("Page Fault : (%d, %d)\n",id,pageno);
-			fprintf(resultf,"Page Fault : (%d, %d)\n",id,pageno);
-			pffreq[id] += 1;
-			sendreply_to_proc(id, -1);
-			int fno = handlePageFault(id, pageno);
-			ptbptr[i * m + pageno].isvalid = 1;
-			ptbptr[i * m + pageno].count = count;
-			ptbptr[i * m + pageno].frameno = fno;
-			
-			notifySched(PAGEFAULT_HANDLED);
-		}
+		if(tlb_table.find(pair<int, int>(id,pageno)) != tlb_table.end())
+		{//  in tlb
+			int frame = tlb_table.find(pair<int, int>(id,pageno))->second.second;
+			sendreply_to_proc(id , frame );
+			ptbptr[i * m + pageno].count = global_count;
+		} 
 		else
-		{
-			sendreply_to_proc(id, ptbptr[i * m + pageno].frameno);
-			ptbptr[i * m + pageno].count = count;
-			//FRAME FOUND
+		{// not in tlb
+
+			if (ptbptr[i * m + pageno].isvalid == 0)
+			{// not in page table
+				//PAGE FAULT
+				printf("Page Fault : (%d, %d)\n",id,pageno);
+				fprintf(resultf,"Page Fault : (%d, %d)\n",id,pageno);
+				pffreq[id] += 1;
+				sendreply_to_proc(id, -1);
+				fno = handlePageFault(id, pageno);
+				ptbptr[i * m + pageno].isvalid = 1;
+				ptbptr[i * m + pageno].count = global_count;
+				ptbptr[i * m + pageno].frameno = fno;
+				
+				notifySched(PAGEFAULT_HANDLED);
+			}
+			else
+			{
+				sendreply_to_proc(id, ptbptr[i * m + pageno].frameno);
+				ptbptr[i * m + pageno].count = global_count;
+				//FRAME FOUND
+			}
+			insert_into_tlb(id,pageno,fno,100);
 		}
 	}
 	if(shmdt(pcbptr) == -1)
@@ -288,12 +345,12 @@ int main(int argc, char const *argv[])
 	}
 	printf("Page fault Count for each Process:\n");	
 	fprintf(resultf,"Page fault Count for each Process:\n");
-	printf("Process Id\tFreq\n");
+	printf("Process-Id\t Page fault Freq\n");
 	fprintf(resultf,"Process Id\tFreq\n");
 	for(i = 0;i<k;i++)
 	{
-		printf("%d\t%d\n",i,pffreq[i]);
-		fprintf(resultf,"%d\t%d\n",i,pffreq[i]);
+		printf("%d\t\t\t%d\n",i,pffreq[i]);
+		fprintf(resultf,"%d\t\t\t%d\n",i,pffreq[i]);
 	}
 	fclose(resultf);
 	return 0;

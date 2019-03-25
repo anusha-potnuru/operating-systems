@@ -25,7 +25,7 @@
 #define TOMMU 10
 #define FROMMMU 20 // FROMMMU+id will be used to read msg from MMU
 
-int pg_no[MAX_PAGES] ;
+int pg_no[MAX_PAGES];
 int no_of_pages;
 
 typedef struct mmumsgbuf_send {
@@ -60,62 +60,52 @@ void conv_ref_pg_no(char * refs)
 int send_message_mmu( int qid, struct mmumsgbuf_send *qbuf )
 {
 	int     result, length;
-
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
 	length = sizeof(struct mmumsgbuf_send) - sizeof(long);
-
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
 		perror("Error in sending message");
 		exit(1);
 	}
-
 	return (result);
 }
+
 int read_message_mmu( int qid, long type, struct mmumsgbuf_recv *qbuf )
 {
 	int     result, length;
-
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
 	length = sizeof(struct mmumsgbuf_recv) - sizeof(long);
-
 	if ((result = msgrcv( qid, qbuf, length, type,  0)) == -1)
 	{
 		perror("Error in receiving message");
 		exit(1);
 	}
-
 	return (result);
 }
 
 int send_message( int qid, struct mymsgbuf *qbuf )
 {
 	int     result, length;
-
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
 	length = sizeof(struct mymsgbuf) - sizeof(long);
-
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
 		perror("Error in sending message");
 		exit(1);
 	}
-
 	return (result);
 }
+
 int read_message( int qid, long type, struct mymsgbuf *qbuf )
 {
-	int     result, length;
-
+	int result, length;
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
 	length = sizeof(struct mymsgbuf) - sizeof(long);
-
 	if ((result = msgrcv( qid, qbuf, length, type,  0)) == -1)
 	{
 		perror("Error in receiving message");
 		exit(1);
 	}
-
 	return (result);
 }
 
@@ -135,6 +125,7 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 	int mq1, mq3;
 	mq1 = msgget(mq1_k, 0666);
 	mq3 = msgget(mq3_k, 0666);
+
 	if (mq1 == -1)
 	{
 		perror("Message Queue1 creation failed");
@@ -184,11 +175,11 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 		}
 		else if (mmu_recv.frameno == -2)
 		{
-			printf("Invalid page reference for process %d terminating ...\n", id) ;
+			printf("Invalid page reference for process %d terminating ...\n\n", id) ;
 			exit(1);
 		}
 	}
-	printf("Process %d Terminated successfly\n", id);
+	printf("Process %d Terminated successfly\n\n", id);
 	mmu_send.pageno = -9;
 	mmu_send.id = id;
 	mmu_send.mtype = TOMMU;

@@ -36,9 +36,6 @@ typedef struct _mmutosch {
 	char mbuf[1];
 } mmutosch;
 
-// int running[MAX_PROCESS];
-// int runh,runt;
-
 // message queue
 typedef struct mymsgbuf {
 	long    mtype;
@@ -49,16 +46,13 @@ typedef struct mymsgbuf {
 int send_message( int qid, struct mymsgbuf *qbuf )
 {
 	int     result, length;
-
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
 	length = sizeof(struct mymsgbuf) - sizeof(long);
-
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
 		perror("Error in sending message");
 		exit(1);
 	}
-
 	return (result);
 }
 
@@ -130,7 +124,7 @@ int main(int argc , char * argv[])
 		int curr_id = msg_recv.id;
 
 		msg_send.mtype = TOPROCESS + curr_id; // 20
-		send_message(mq1, &msg_send);
+		send_message(mq1, &msg_send); // not required after page fault
 
 		//recv messages from mmu
 		mmutosch mmu_recv;
