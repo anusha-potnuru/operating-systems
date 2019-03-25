@@ -80,7 +80,7 @@ int pcbid;
 
 int m,k;
 
-int readRequest(int* id)
+int readReq_from_process(int* id)
 {
 	struct msgbuf mbuf;
 	int length;
@@ -100,7 +100,7 @@ int readRequest(int* id)
 	return mbuf.pageno;
 }
 
-void sendreply(int id, int frameno)
+void sendreply_to_proc(int id, int frameno)
 {
 	struct mmutopbuf mbuf;
 	mbuf.mtype = id + MMUTOPRO;
@@ -126,17 +126,17 @@ void notifySched(int type)
 		exit(EXIT_FAILURE);
 	}
 	//printf("Sent signal to sched = %d\n",type);
-
 }
+
 pcb *pcbptr;
 ptbentry *ptbptr;
 freelist *freeptr;
 
 int handlePageFault(int id, int pageno)
 {
-	int i;
-	if (freeptr->current == -1 || pcbptr[i].f_cnt <= pcbptr[i].f_allo)
-	{
+	int i; // ?
+	if (freeptr->current == -1 )
+	{ // || pcbptr[i].f_cnt <= pcbptr[i].f_allo
 		int min = INT_MAX, mini = -1;
 		int victim = 0;
 		for (i = 0; i < pcbptr[i].m; i++)
@@ -144,7 +144,7 @@ int handlePageFault(int id, int pageno)
 			if (ptbptr[id * m + i].isvalid == 1)
 			{
 				if (ptbptr[id * m + i].count < min)
-				{
+				{// lru
 					min = ptbptr[id * m + i].count;
 					victim = ptbptr[id * m + i].frameno;
 					mini = i;
@@ -174,44 +174,30 @@ void freepages(int i)
 			freeptr->current += 1;
 		}
 	}
-	//TODO: Think shuld change the allocation
 }
 
 int serviceMRequest()
 {
 	pcbptr = (pcb*)(shmat(pcbid, NULL, 0));
-	/*if (*(int *)pcbptr == -1)
-	{
-		perror("pcb-shmat");
-		exit(EXIT_FAILURE);
-	}*/
+
 	ptbptr = (ptbentry*)(shmat(ptbid, NULL, 0));
-	/*if (*(int *)ptbptr == -1)
-	{
-		perror("pcb-shmat");
-		exit(EXIT_FAILURE);
-	}*/
+
 	freeptr = (freelist*)(shmat(freelid, NULL, 0));
-	/*if (*((int *)freeptr) == -1)
-	{
-		perror("freel-shmat");
-		exit(EXIT_FAILURE);
-	}*/
 
 	int id = -1, pageno;
-	pageno = readRequest(&id);
+	pageno = readReq_from_process(&id);
 	if(pageno == -1 && id == -1)
 	{
 		return 0;
 	}
 	int i = id;
 	if (pageno == PROCESS_OVER)
-	{
+	{ // -9
 		freepages(id);
-		notifySched(TERMINATED);
-		//printf("Notifying notifySched\n");
-		return;
+		notifySched(TERMINATED); // type 2 message
+		return 0;
 	}
+
 	count ++;
 	printf("Page reference : (%d,%d,%d)\n",count,id,pageno);
 	fprintf(resultf,"Page reference : (%d,%d,%d)\n",count,id,pageno);
@@ -219,7 +205,7 @@ int serviceMRequest()
 	{
 		printf("Invalid Page Reference : (%d %d)\n",id,pageno);
 		fprintf(resultf,"Invalid Page Reference : (%d %d)\n",id,pageno);
-		sendreply(id, INVALID_PAGE_REF);
+		sendreply_to_proc(id, INVALID_PAGE_REF);
 		printf("Process %d: TRYING TO ACCESS INVALID PAGE REFERENCE %d\n", id, pageno);
 		freepages(id);
 		notifySched(TERMINATED);
@@ -234,7 +220,7 @@ int serviceMRequest()
 			printf("Page Fault : (%d, %d)\n",id,pageno);
 			fprintf(resultf,"Page Fault : (%d, %d)\n",id,pageno);
 			pffreq[id] += 1;
-			sendreply(id, -1);
+			sendreply_to_proc(id, -1);
 			int fno = handlePageFault(id, pageno);
 			ptbptr[i * m + pageno].isvalid = 1;
 			ptbptr[i * m + pageno].count = count;
@@ -244,7 +230,7 @@ int serviceMRequest()
 		}
 		else
 		{
-			sendreply(id, ptbptr[i * m + pageno].frameno);
+			sendreply_to_proc(id, ptbptr[i * m + pageno].frameno);
 			ptbptr[i * m + pageno].count = count;
 			//FRAME FOUND
 		}
@@ -264,7 +250,9 @@ int serviceMRequest()
 		perror("freel-shmdt");
 		exit(EXIT_FAILURE);
 	}
+	return 0;
 }
+
 int flag = 1;
 void handletgerm(int sig)
 {
@@ -287,6 +275,7 @@ int main(int argc, char const *argv[])
 	m = atoi(argv[6]);
 	k = atoi(argv[7]);
 	signal(SIGUSR2, handletgerm);
+
 	pffreq = (int *)malloc(k*sizeof(int));
 	for(i=0;i<k;i++)
 	{
