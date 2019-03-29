@@ -15,7 +15,8 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-
+#include <bits/stdc++.h>
+using namespace std;
 
 typedef struct {
 	int frameno;
@@ -27,6 +28,7 @@ typedef struct {
 	pid_t pid;
 	int m;
 }pcb;
+
 
 typedef struct 
 {
@@ -205,11 +207,9 @@ void createPCBs()
 	{
 		ptr[i].pid = i;
 		ptr[i].m = rand()%m + 1;
-		// ptr[i].f_allo = 0;
 		totpages +=  ptr[i].m;
 	}
 
-	int allo_frame = 0;
 	printf("tot = %d, k = %d, f=  %d\n",totpages,k,f);
 
 	for(i=0;i<k;i++)
@@ -223,6 +223,7 @@ void createPCBs()
 		myexit(EXIT_FAILURE);
 	}
 }
+
 
 void clearResources()
 {
@@ -263,7 +264,7 @@ void createProcesses()
 {
 	pcb *ptr = (pcb*)(shmat(pcbid, NULL, 0));
 
-	int i,j;
+	int i,j, pid;
 	for(i=0;i<k;i++)
 	{
 		int rlen = rand()%(8*ptr[i].m) + 2*ptr[i].m + 1;
@@ -282,7 +283,8 @@ void createProcesses()
 			l += sprintf(rstring+l,"%d|",r); // writes it into rstring+l
 		}
 		printf("Ref string = %s\n",rstring);
-		if(fork() == 0)
+		pid = fork();
+		if(pid == 0)
 		{
 			char buf1[20],buf2[20],buf3[20];
 			sprintf(buf1,"%d",i); // process number
@@ -290,7 +292,10 @@ void createProcesses()
 			sprintf(buf3,"%d",msgq3key);
 			execlp("./process","./process",buf1,buf2,buf3,rstring,(char *)(NULL));
 			exit(0);
-
+		}
+		else
+		{
+			procid_to_pid.insert( pair<int, int>(i, pid) );
 		}
 		//TODO: fork proecess here
 		usleep(250*1000);	
@@ -336,12 +341,13 @@ int main(int argc, char const *argv[])
 
 	if((spid = fork()) == 0)
 	{
-		char buf1[20],buf2[20],buf3[20],buf4[20];
+		char buf1[20],buf2[20],buf3[20],buf4[20], buf5[20];
 		sprintf(buf1,"%d",readykey);
 		sprintf(buf2,"%d",msgq2key);
 		sprintf(buf3,"%d",k);
 		sprintf(buf4,"%d",pid);
-		execlp("./scheduler","./scheduler",buf1,buf2,buf3,buf4,(char *)(NULL));
+		sprintf(buf5, "%d", pcbid); //added
+		execlp("./scheduler","./scheduler",buf1,buf2,buf3,buf4,buf5,(char *)(NULL));
 		exit(0);
 	}
 

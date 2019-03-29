@@ -71,7 +71,7 @@ struct mmutosch
 	char mbuf[1];
 };
 
-typedef	map< pair<int,int>,pair<int,int> > tlb;
+typedef	map < pair<int,int>,pair<int,int> > tlb;
 tlb tlb_table; // tlb variable
 tlb::iterator frame_it;
 
@@ -247,7 +247,7 @@ int serviceMRequest()
 	global_count ++;
 	printf("Page reference : (%d,%d,%d)\n",global_count,id,pageno);
 	fprintf(resultf,"Page reference : (%d,%d,%d)\n",global_count,id,pageno);
-	if (pcbptr[id].m < pageno || pageno < 0)
+	if( pcbptr[id].m < pageno || pageno < 0)
 	{
 		printf("Invalid Page Reference : (%d %d)\n",id,pageno);
 		fprintf(resultf,"Invalid Page Reference : (%d %d)\n",id,pageno);
@@ -262,6 +262,7 @@ int serviceMRequest()
 	{
 		if(tlb_table.find(pair<int, int>(id,pageno)) != tlb_table.end())
 		{//  in tlb
+			printf("in tlb\n");
 			int frame = tlb_table.find(pair<int, int>(id,pageno))->second.second;
 			sendreply_to_proc(id , frame );
 			ptbptr[i * m + pageno].count = global_count;
@@ -270,7 +271,7 @@ int serviceMRequest()
 		{// not in tlb
 
 			if (ptbptr[i * m + pageno].isvalid == 0)
-			{// not in page table
+			{ // not in page table
 				//PAGE FAULT
 				printf("Page Fault : (%d, %d)\n",id,pageno);
 				fprintf(resultf,"Page Fault : (%d, %d)\n",id,pageno);
@@ -281,7 +282,7 @@ int serviceMRequest()
 				ptbptr[i * m + pageno].count = global_count;
 				ptbptr[i * m + pageno].frameno = fno;
 				
-				notifySched(PAGEFAULT_HANDLED);
+				notifySched(PAGEFAULT_HANDLED); // 5, to enqueue this process and start next
 			}
 			else
 			{

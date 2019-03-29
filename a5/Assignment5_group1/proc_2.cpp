@@ -28,6 +28,14 @@
 int pg_no[MAX_PAGES];
 int no_of_pages;
 
+void signal_handler(int signo)
+{
+	if(signo==SIGUSR1)
+	{
+		// break from pause
+	}
+}
+
 typedef struct mmumsgbuf_send {
 	long    mtype;          /* Message type */
 	int id;
@@ -138,6 +146,7 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 	}
 	printf("Process id= %d\n", id);
 
+	signal(SIGUSR1, signal_handler);
 	//sending to scheduler
 	mymsgbuf msg_send;
 	msg_send.mtype = TOSCH; // 10
@@ -171,6 +180,7 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 		else if (mmu_recv.frameno == -1) //here cpg will not be incremented
 		{
 			printf("Page fault occured for process %d\n", id);
+			pause();
 			// read_message(mq1, FROMSCH + id, &msg_recv);
 		}
 		else if (mmu_recv.frameno == -2)

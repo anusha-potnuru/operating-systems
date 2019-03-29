@@ -88,8 +88,8 @@ int read_message_mmu( int qid, long type,mmutosch *qbuf )
 
 int main(int argc , char * argv[])
 {
-	int mq1_key, mq2_key, master_pid;
-	if (argc < 5) {
+	int mq1_key, mq2_key, master_pid, pcbkey;
+	if (argc < 6) {
 		printf("Scheduler rkey q2key k mpid\n");
 		exit(EXIT_FAILURE);
 	}
@@ -97,7 +97,9 @@ int main(int argc , char * argv[])
 	mq2_key = atoi(argv[2]);
 	k = atoi(argv[3]);
 	master_pid = atoi(argv[4]);
+	pcbkey = atoi(argv[5]);
 
+	
 	mymsgbuf msg_send, msg_recv;
 
 	int mq1 = msgget(mq1_key, 0666);
@@ -114,14 +116,17 @@ int main(int argc , char * argv[])
 	}
 	printf("Total No. of Process received = %d\n", k);
 
-	//initialize the variables for running array
+	//initialize the variable
 	int terminated_process = 0; //to keep track of running process to exit at last
-	// int terminate[MAX_PROCESS];
+
 	while (1)
 	{
 		// If msgtyp is greater than 0, then the first message in the queue of type msgtyp is read
 		read_message(mq1, FROMPROCESS, &msg_recv); // 10
 		int curr_id = msg_recv.id;
+		
+		// int curr_pid = msg_recv.pid;
+		// kill(curr_pid, SIGUSR1);
 
 		msg_send.mtype = TOPROCESS + curr_id; // 20
 		send_message(mq1, &msg_send); // not required after page fault
