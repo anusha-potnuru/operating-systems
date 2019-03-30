@@ -41,9 +41,8 @@ typedef struct {
 
 typedef struct {
 	pid_t pid;
+	int proc_pid;
 	int m;
-	int f_cnt;
-	int f_allo;
 } pcb;
 
 typedef struct
@@ -88,7 +87,6 @@ int m,k;
 
 void insert_into_tlb(int pid, int page_no, int frame_no, int s)
 {
-	cout<<"MMU: Inserting into tlb"<<endl;
 	//If tlb is not yet full
 	if(tlb_table.size() < s)
 	{
@@ -128,6 +126,8 @@ void remove_from_tlb(int pid,int page_no)
 
 int readReq_from_process(int* id)
 {
+	printf("readReq_from_process\n");
+
 	struct msgbuf mbuf;
 	int length;
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
@@ -185,7 +185,7 @@ int handlePageFault(int id, int pageno)
 	{ // || pcbptr[i].f_cnt <= pcbptr[i].f_allo
 		int min = INT_MAX, mini = -1;
 		int victim = 0;
-		for (i = 0; i < pcbptr[i].m; i++)
+		for (i = 0; i < pcbptr[id].m; i++) //changed
 		{
 			if (ptbptr[id * m + i].isvalid == 1)
 			{
@@ -256,13 +256,12 @@ int serviceMRequest()
 		freepages(id);
 		notifySched(TERMINATED);
 		//Invalid reference
-
 	}
 	else
 	{
 		if(tlb_table.find(pair<int, int>(id,pageno)) != tlb_table.end())
 		{//  in tlb
-			printf("in tlb\n");
+			// printf("in tlb\n");
 			int frame = tlb_table.find(pair<int, int>(id,pageno))->second.second;
 			sendreply_to_proc(id , frame );
 			ptbptr[i * m + pageno].count = global_count;
@@ -286,6 +285,7 @@ int serviceMRequest()
 			}
 			else
 			{
+				// printf("in page table\n");
 				sendreply_to_proc(id, ptbptr[i * m + pageno].frameno);
 				ptbptr[i * m + pageno].count = global_count;
 				//FRAME FOUND

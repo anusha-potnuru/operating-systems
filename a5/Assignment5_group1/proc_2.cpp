@@ -17,6 +17,8 @@
 #include <signal.h>
 #include <ctype.h>
 #include <sys/shm.h>
+#include <errno.h>
+extern int errno;
 
 #define MAX_BUFFER_SIZE 100
 #define MAX_PAGES 1000
@@ -32,7 +34,12 @@ void signal_handler(int signo)
 {
 	if(signo==SIGUSR1)
 	{
+		printf("received SIGNAL\n");
 		// break from pause
+	}
+	if(signo==SIGUSR2)
+	{
+		pause();
 	}
 }
 
@@ -85,8 +92,20 @@ int read_message_mmu( int qid, long type, struct mmumsgbuf_recv *qbuf )
 	length = sizeof(struct mmumsgbuf_recv) - sizeof(long);
 	if ((result = msgrcv( qid, qbuf, length, type,  0)) == -1)
 	{
-		perror("Error in receiving message");
-		exit(1);
+		if(errno == EINTR)
+		{
+			if ((result = msgrcv( qid, qbuf, length, type,  0)) == -1)
+			{
+				perror("Error in receiving message process read_message_mmu2");
+				exit(1);
+			}
+			printf("yessss\n");
+		}
+		else
+		{
+			perror("Error in receiving message process read_message_mmu");
+			exit(1);
+		}		
 	}
 	return (result);
 }
@@ -98,7 +117,7 @@ int send_message( int qid, struct mymsgbuf *qbuf )
 	length = sizeof(struct mymsgbuf) - sizeof(long);
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
-		perror("Error in sending message");
+		perror("Error in sending message process send_message");
 		exit(1);
 	}
 	return (result);
@@ -111,7 +130,7 @@ int read_message( int qid, long type, struct mymsgbuf *qbuf )
 	length = sizeof(struct mymsgbuf) - sizeof(long);
 	if ((result = msgrcv( qid, qbuf, length, type,  0)) == -1)
 	{
-		perror("Error in receiving message");
+		perror("Error in receiving message process, read_message");
 		exit(1);
 	}
 	return (result);
@@ -147,16 +166,21 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 	printf("Process id= %d\n", id);
 
 	signal(SIGUSR1, signal_handler);
+	signal(SIGUSR2, signal_handler);
+
 	//sending to scheduler
 	mymsgbuf msg_send;
 	msg_send.mtype = TOSCH; // 10
 	msg_send.id = id;
 	send_message(mq1, &msg_send);
+	printf("process send_message done\n");
 	////
 
 	//Wait until msg receive from scheduler
 	mymsgbuf msg_recv;
-	read_message(mq1, FROMSCH + id, &msg_recv);
+	printf("waiting for %d\n\n", FROMSCH+id );
+	read_message(mq1, FROMSCH + id, &msg_recv); //20
+	printf("process read message done\n");
 	/////////
 
 	mmumsgbuf_send mmu_send;
@@ -180,7 +204,9 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 		else if (mmu_recv.frameno == -1) //here cpg will not be incremented
 		{
 			printf("Page fault occured for process %d\n", id);
-			pause();
+			printf("Pausing %d\n\n\n", getpid()); // added
+			kill(getpid(), SIGUSR2);
+
 			// read_message(mq1, FROMSCH + id, &msg_recv);
 		}
 		else if (mmu_recv.frameno == -2)

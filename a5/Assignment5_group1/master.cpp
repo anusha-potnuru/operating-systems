@@ -26,6 +26,7 @@ typedef struct {
 
 typedef struct {
 	pid_t pid;
+	int proc_pid;
 	int m;
 }pcb;
 
@@ -269,6 +270,7 @@ void createProcesses()
 	{
 		int rlen = rand()%(8*ptr[i].m) + 2*ptr[i].m + 1;
 		char rstring[m*20*40]; // ?? m*10*4
+		printf("\n\n\n==========PROCESS %d\n", i);
 		printf("Reference string length = %d\n",rlen);
 		int l = 0;
 		for(j=0;j<rlen;j++)
@@ -295,7 +297,7 @@ void createProcesses()
 		}
 		else
 		{
-			procid_to_pid.insert( pair<int, int>(i, pid) );
+			ptr[i].proc_pid = pid;
 		}
 		//TODO: fork proecess here
 		usleep(250*1000);	
