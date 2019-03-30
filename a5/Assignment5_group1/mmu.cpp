@@ -85,13 +85,13 @@ int pcbid;
 
 int m,k;
 
-void insert_into_tlb(int pid, int page_no, int frame_no, int s)
+void insert_into_tlb(int id, int page_no, int frame_no, int s)
 {
 	//If tlb is not yet full
 	if(tlb_table.size() < s)
 	{
 		// Just insert the new pair
-		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(pid,page_no),
+		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(id,page_no),
 			pair<int,int>(frame_no, global_count));
 		tlb_table.insert(to_insert);
 	}
@@ -112,22 +112,20 @@ void insert_into_tlb(int pid, int page_no, int frame_no, int s)
 		//Erase entry from the table
 		tlb_table.erase(lru_it);
 		//Make a new table entry and insert them into the  tlb
-		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(pid,page_no),
+		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(id,page_no),
 			pair<int,int>(frame_no,global_count));
 		tlb_table.insert(to_insert);
 	}
 }
 
 //Remove an entry form the tlb
-void remove_from_tlb(int pid,int page_no)
+void remove_from_tlb(int id,int page_no)
 {
-	tlb_table.erase(pair<int,int>(pid,page_no));
+	tlb_table.erase(pair<int,int>(id,page_no));
 }
 
 int readReq_from_process(int* id)
 {
-	printf("readReq_from_process\n");
-
 	struct msgbuf mbuf;
 	int length;
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
@@ -139,7 +137,7 @@ int readReq_from_process(int* id)
 	{
 		if(errno == EINTR)
 			return -1;
-		perror("msgrcv");
+		perror("msgrcv read in mmu from process");
 		exit(EXIT_FAILURE);
 	}
 	*id = mbuf.id;
@@ -155,7 +153,7 @@ void sendreply_to_proc(int id, int frameno)
 	int rst = msgsnd(msgq3id, &mbuf, length, 0);
 	if (rst == -1)
 	{
-		perror("msgsnd");
+		perror("msgsnd mmu to process");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -168,7 +166,7 @@ void notifySched(int type)
 	int rst = msgsnd(msgq2id, &mbuf, length, 0);
 	if (rst == -1)
 	{
-		perror("msgsnd");
+		perror("msgsnd mmu to sched");
 		exit(EXIT_FAILURE);
 	}
 	//printf("Sent signal to sched = %d\n",type);

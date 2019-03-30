@@ -15,6 +15,7 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -206,7 +207,7 @@ void createPCBs()
 	int totpages = 0; // total no of pages req by all processes
 	for(i=0;i<k;i++)
 	{
-		ptr[i].pid = i;
+		ptr[i].pid = i+1; // added
 		ptr[i].m = rand()%m + 1;
 		totpages +=  ptr[i].m;
 	}
@@ -289,7 +290,7 @@ void createProcesses()
 		if(pid == 0)
 		{
 			char buf1[20],buf2[20],buf3[20];
-			sprintf(buf1,"%d",i); // process number
+			sprintf(buf1,"%d",i); // process number, added
 			sprintf(buf2,"%d",readykey);
 			sprintf(buf3,"%d",msgq3key);
 			execlp("./process","./process",buf1,buf2,buf3,rstring,(char *)(NULL));
@@ -310,7 +311,14 @@ void timetoend(int sig)
 {
 	//printf("Mater: gi=o the signal\n");
 	sleep(1);
-	kill(spid, SIGTERM);
+	// kill(spid, SIGTERM);
+	int status;
+	int w = waitpid(spid, &status, 0);
+	if(w==-1)
+	{
+		perror("scheduler waitpid");
+		exit(1);
+	}
 	kill(mpid, SIGUSR2);
 	sleep(2);
 	flag = 1;
@@ -341,6 +349,9 @@ int main(int argc, char const *argv[])
 	createPCBs();
 	createMessageQueues();
 
+	printf("generating processes\n");
+	createProcesses();
+
 	if((spid = fork()) == 0)
 	{
 		char buf1[20],buf2[20],buf3[20],buf4[20], buf5[20];
@@ -367,8 +378,7 @@ int main(int argc, char const *argv[])
 		execlp("./mmu","./mmu",buf1,buf2,buf3,buf4,buf5,buf6,buf7,(char *)(NULL));
 		exit(0);
 	}
-	printf("generating processes\n");
-	createProcesses();
+	
 	if(flag == 0)
 		pause();
 	clearResources();

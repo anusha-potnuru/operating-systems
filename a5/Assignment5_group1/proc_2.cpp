@@ -79,7 +79,7 @@ int send_message_mmu( int qid, struct mmumsgbuf_send *qbuf )
 	length = sizeof(struct mmumsgbuf_send) - sizeof(long);
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
-		perror("Error in sending message");
+		perror("Error in sending message process send_message_mmu");
 		exit(1);
 	}
 	return (result);
@@ -103,10 +103,12 @@ int read_message_mmu( int qid, long type, struct mmumsgbuf_recv *qbuf )
 		}
 		else
 		{
+			printf("qid: %d, type %d\n",qid, type );
 			perror("Error in receiving message process read_message_mmu");
 			exit(1);
 		}		
 	}
+	printf("qid: %d, type %d\n",qid, type );
 	return (result);
 }
 
@@ -164,7 +166,7 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 		exit(1);
 	}
 	printf("Process id= %d\n", id);
-
+	printf("Process pid: %d\n", getpid());
 	signal(SIGUSR1, signal_handler);
 	signal(SIGUSR2, signal_handler);
 
@@ -176,11 +178,13 @@ int main(int argc, char *argv[]) //argv[] ={id,mq1,mq3,ref_string}
 	printf("process send_message done\n");
 	////
 
+	kill(getpid(), SIGUSR2);
+
 	//Wait until msg receive from scheduler
-	mymsgbuf msg_recv;
-	printf("waiting for %d\n\n", FROMSCH+id );
-	read_message(mq1, FROMSCH + id, &msg_recv); //20
-	printf("process read message done\n");
+	// mymsgbuf msg_recv;
+	// printf("waiting for %d\n\n", FROMSCH+id );
+	// read_message(mq1, FROMSCH + id, &msg_recv); //20
+	// printf("process read message done\n");
 	/////////
 
 	mmumsgbuf_send mmu_send;

@@ -71,10 +71,9 @@ int send_message( int qid, struct mymsgbuf *qbuf )
 	length = sizeof(struct mymsgbuf) - sizeof(long);
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
-		perror("Error in sending message");
+		perror("Error in sending message Scheduler send_message --");
 		exit(1);
 	}
-	printf("sch send_message done\n");
 	return (result);
 }
 
@@ -94,7 +93,7 @@ int read_message( int qid, long type, struct mymsgbuf *qbuf )
 	return (result);
 }
 
-int read_message_mmu( int qid, long type,mmutosch *qbuf )
+int read_message_mmu( int qid, long type, mmutosch *qbuf )
 {
 	int result, length;
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
@@ -102,9 +101,12 @@ int read_message_mmu( int qid, long type,mmutosch *qbuf )
 
 	if ((result = msgrcv(qid, qbuf, length, type,  0)) == -1)
 	{
+		printf("ERROR: %d\n", errno);
+		printf("qid: %d, type %d\n",qid, type );
 		perror("Error in receiving message Scheduler read_message_mmu");
 		exit(1);
 	}
+	printf("qid: %d, type %d\n",qid, type );
 	return (result);
 }
 
@@ -153,13 +155,14 @@ int main(int argc , char * argv[])
 		int curr_id = msg_recv.id;
 		printf("sch read message for curr_id: %d\n", curr_id);
 
-		msg_send.mtype = TOPROCESS + curr_id; // 20
-		send_message(mq1, &msg_send); // not required after page fault
-		printf("sent to mq1: %d\n", TOPROCESS+curr_id);
+		// msg_send.mtype = TOPROCESS + curr_id; // 20
+		// send_message(mq1, &msg_send); // not required after page fault
+		// printf("sent to mq1: %d\n", TOPROCESS+curr_id);
 
 		int curr_pid = pcbptr[curr_id].proc_pid;
 		printf("current pid: %d\n", curr_pid);
 		kill(curr_pid, SIGUSR1);
+		usleep(200); // maybe mmu is reading before sending
 
 		//recv messages from mmu
 		mmutosch mmu_recv;
@@ -175,7 +178,6 @@ int main(int argc , char * argv[])
 		else if (mmu_recv.mtype == TERMINATED)
 		{
 			terminated_process++;
-			//printf("Got terminate %d\n", curr_id);
 		}
 		else
 		{
