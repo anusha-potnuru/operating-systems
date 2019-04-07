@@ -60,6 +60,7 @@ int find_free_block()
 			free_ptr = (free_ptr+1)%no_of_blocks;
 		}
 	}
+	// cout<<"free block returned"<<endl;
 	return free_ptr;
 }
 
@@ -79,7 +80,7 @@ int my_open(const char *path)
 		node->fd = f;
 		f++;
 		node->next=NULL;
-		prev = node;
+		sb->d = node;
 	}
 	else
 	{
@@ -171,20 +172,22 @@ int my_read(int fd, char *buf, int size)
 }
 
 // 1 -append 0-overwrite
-int my_write(int fd, char *buf,int size, int flag)
+int my_write(int fd, char *buf, int size, int flag)
 {
 	cout<<"in my write"<<endl;
 	directory *temp = sb->d;
 
 	while(temp!=NULL)
-	{
-		cout<<temp->fd<<" ";
+	{		
 		if(temp->fd==fd)
 		{
 			break;
 		}
 		temp =temp->next;
-	} 
+	}
+	cout<<temp->fd<<" "<<endl;
+	if(!temp)
+		cout<<"error temp is null"<<endl; 
 	int bn = temp->block_no;
 	int prev;
 	if(flag==1)
@@ -194,7 +197,12 @@ int my_write(int fd, char *buf,int size, int flag)
 			prev = bn;
 			bn = block1->arr[bn];
 		}
-		block1->arr[prev] = bn = find_free_block();
+		bn = find_free_block();
+		block1->arr[prev] = bn;
+
+		if(temp->block_no==-1)
+			temp->block_no = bn;
+		cout<<"if done"<<endl;
 	}
 	else if(flag==0)
 	{
@@ -214,13 +222,15 @@ int my_write(int fd, char *buf,int size, int flag)
 	cout<<"block number "<<bn<<endl;
 	while(size>block_size)
 	{
-		strncpy(buf,file_system[bn].b_data,block_size);
+		cout<<"size "<<size<<endl;
+		strncpy(file_system[bn].b_data, buf, block_size);
+		buf = buf+block_size;
 		sb->bit_vector[bn]=1;
 		bn = find_free_block();
 		cout<<"block number "<<bn<<endl;
 		size -= block_size;
 	}
-	strncpy(buf,file_system[bn].b_data,size);
+	strncpy(file_system[bn].b_data,buf,size);
 	sb->bit_vector[bn]=1;
 	return size;
 }
@@ -296,6 +306,10 @@ int main()
 	sb->file_system_size = file_system_size;
 	sb->disk_block_size = block_size;
 	sb->d = NULL;
+
+	sb->bit_vector[0] = -1;
+	sb->bit_vector[1]= -1;
+
 	int fd = my_open("abc.txt");
 	cout<<"fd of file is "<<fd;
 	char *buffer;
