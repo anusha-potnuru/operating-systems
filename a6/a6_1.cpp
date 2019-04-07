@@ -85,39 +85,6 @@ int my_open(const char *path)
 	{
 		while(temp!=NULL)
 		{
-<<<<<<< HEAD
-			return temp->fd;
-		}
-		prev = temp;
-		temp =temp->next;
-	} 
-	directory *node = (directory*)malloc(sizeof(directory));
-	// node->file_name = (char*)malloc(sizeof(char)*)
-	strcpy(node->file_name, path);
-	// doubt
-	node->block_no = -1; 
-	node->fd = f;
-	// to increase value of fd for next file
-	f++;
-	node->next=NULL;
-	prev->next = node;
-||||||| merged common ancestors
-			return temp->fd;
-		}
-		prev = temp;
-		temp =temp->next;
-	} 
-	directory *node = (directory*)malloc(sizeof(directory));
-	// node->file_name = (char*)malloc(sizeof(char)*)
-	strcpy(node->file_name,path);
-	// doubt
-	node->block_no = -1; 
-	node->fd = f;
-	// to increase value of fd for next file
-	f++;
-	node->next=NULL;
-	prev->next = node;
-=======
 			if(strcmp(temp->file_name,path)==0)
 			{
 				return temp->fd;
@@ -136,7 +103,6 @@ int my_open(const char *path)
 		node->next=NULL;
 		prev->next = node;
 	}
->>>>>>> 91f9a5c00d103f2bc2e142e0f0a471b508e9fb4d
 	return node->fd;
 }
 
