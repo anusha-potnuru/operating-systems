@@ -6,7 +6,7 @@ int file_system_size,block_size;
 int no_of_blocks;
 typedef struct 
 {
-	char b_data[];
+	char *b_data;
 }block;
 
 typedef struct
@@ -26,34 +26,34 @@ typedef struct
 typedef struct 
 {
 	char *file_name;
-	block *link;
+	int block_no;
 	directory *next;
 }directory;
 
-// int my_open(File *f)
-// {
-// 	fopen()
-// }
 
 int main()
 {
 	
 	cin>>file_system_size>>block_size;
 	no_of_blocks = file_system_size/block_size;
+
 	int fat[no_of_blocks];
-	block** file_system = malloc(sizeof(block)*no_of_blocks); 
+
+	block* file_system = malloc(sizeof(block)*no_of_blocks); 
 	for(i=0;i<no_of_blocks;i++)
 	{
-		file_system[i]=(block*)malloc(sizeof(block)+sizeof(char)*block_size);
+		file_system[i]->b_data = (char*)malloc(sizeof(char)*block_size);
 	}
+
 	fat* block1 = malloc(sizeof(fat)+sizeof(int)*no_of_blocks);
+	block1 = (fat*)file_system[1];
+	directory *dir = malloc(sizeof(directory));
 	// creating superblock
-	superblock* sb = malloc(sizeof(superblock)+sizeof(bool)*no_of_blocks+sizeof(directory));
+	superblock* sb = malloc(sizeof(superblock)+sizeof(bool)*no_of_blocks);
 	sb = (superblock*)file_system[0];
 	sb->file_system_size = file_system_size;
 	sb->disk_block_size = block_size;
-	block1 = (fat*)file_system[1];
-
+	sb->directory = dir;
 
 	return 0;
 }
