@@ -41,9 +41,8 @@ typedef struct {
 
 typedef struct {
 	pid_t pid;
+	int proc_pid;
 	int m;
-	int f_cnt;
-	int f_allo;
 } pcb;
 
 typedef struct
@@ -71,7 +70,7 @@ struct mmutosch
 	char mbuf[1];
 };
 
-typedef	map< pair<int,int>,pair<int,int> > tlb;
+typedef	map < pair<int,int>,pair<int,int> > tlb;
 tlb tlb_table; // tlb variable
 tlb::iterator frame_it;
 
@@ -86,14 +85,13 @@ int pcbid;
 
 int m,k;
 
-void insert_into_tlb(int pid, int page_no, int frame_no, int s)
+void insert_into_tlb(int id, int page_no, int frame_no, int s)
 {
-	cout<<"MMU: Inserting into tlb"<<endl;
 	//If tlb is not yet full
 	if(tlb_table.size() < s)
 	{
 		// Just insert the new pair
-		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(pid,page_no),
+		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(id,page_no),
 			pair<int,int>(frame_no, global_count));
 		tlb_table.insert(to_insert);
 	}
@@ -114,16 +112,16 @@ void insert_into_tlb(int pid, int page_no, int frame_no, int s)
 		//Erase entry from the table
 		tlb_table.erase(lru_it);
 		//Make a new table entry and insert them into the  tlb
-		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(pid,page_no),
+		pair< pair<int,int>, pair<int,int> > to_insert(pair<int,int>(id,page_no),
 			pair<int,int>(frame_no,global_count));
 		tlb_table.insert(to_insert);
 	}
 }
 
 //Remove an entry form the tlb
-void remove_from_tlb(int pid,int page_no)
+void remove_from_tlb(int id,int page_no)
 {
-	tlb_table.erase(pair<int,int>(pid,page_no));
+	tlb_table.erase(pair<int,int>(id,page_no));
 }
 
 int readReq_from_process(int* id)
@@ -139,7 +137,7 @@ int readReq_from_process(int* id)
 	{
 		if(errno == EINTR)
 			return -1;
-		perror("msgrcv");
+		perror("msgrcv read in mmu from process");
 		exit(EXIT_FAILURE);
 	}
 	*id = mbuf.id;
@@ -155,7 +153,7 @@ void sendreply_to_proc(int id, int frameno)
 	int rst = msgsnd(msgq3id, &mbuf, length, 0);
 	if (rst == -1)
 	{
-		perror("msgsnd");
+		perror("msgsnd mmu to process");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -168,7 +166,7 @@ void notifySched(int type)
 	int rst = msgsnd(msgq2id, &mbuf, length, 0);
 	if (rst == -1)
 	{
-		perror("msgsnd");
+		perror("msgsnd mmu to sched");
 		exit(EXIT_FAILURE);
 	}
 	//printf("Sent signal to sched = %d\n",type);
@@ -185,7 +183,7 @@ int handlePageFault(int id, int pageno)
 	{ // || pcbptr[i].f_cnt <= pcbptr[i].f_allo
 		int min = INT_MAX, mini = -1;
 		int victim = 0;
-		for (i = 0; i < pcbptr[i].m; i++)
+		for (i = 0; i < pcbptr[id].m; i++) //changed
 		{
 			if (ptbptr[id * m + i].isvalid == 1)
 			{
@@ -247,7 +245,7 @@ int serviceMRequest()
 	global_count ++;
 	printf("Page reference : (%d,%d,%d)\n",global_count,id,pageno);
 	fprintf(resultf,"Page reference : (%d,%d,%d)\n",global_count,id,pageno);
-	if (pcbptr[id].m < pageno || pageno < 0)
+	if( pcbptr[id].m < pageno || pageno < 0)
 	{
 		printf("Invalid Page Reference : (%d %d)\n",id,pageno);
 		fprintf(resultf,"Invalid Page Reference : (%d %d)\n",id,pageno);
@@ -256,12 +254,12 @@ int serviceMRequest()
 		freepages(id);
 		notifySched(TERMINATED);
 		//Invalid reference
-
 	}
 	else
 	{
 		if(tlb_table.find(pair<int, int>(id,pageno)) != tlb_table.end())
 		{//  in tlb
+			// printf("in tlb\n");
 			int frame = tlb_table.find(pair<int, int>(id,pageno))->second.second;
 			sendreply_to_proc(id , frame );
 			ptbptr[i * m + pageno].count = global_count;
@@ -270,7 +268,7 @@ int serviceMRequest()
 		{// not in tlb
 
 			if (ptbptr[i * m + pageno].isvalid == 0)
-			{// not in page table
+			{ // not in page table
 				//PAGE FAULT
 				printf("Page Fault : (%d, %d)\n",id,pageno);
 				fprintf(resultf,"Page Fault : (%d, %d)\n",id,pageno);
@@ -281,10 +279,11 @@ int serviceMRequest()
 				ptbptr[i * m + pageno].count = global_count;
 				ptbptr[i * m + pageno].frameno = fno;
 				
-				notifySched(PAGEFAULT_HANDLED);
+				notifySched(PAGEFAULT_HANDLED); // 5, to enqueue this process and start next
 			}
 			else
 			{
+				// printf("in page table\n");
 				sendreply_to_proc(id, ptbptr[i * m + pageno].frameno);
 				ptbptr[i * m + pageno].count = global_count;
 				//FRAME FOUND

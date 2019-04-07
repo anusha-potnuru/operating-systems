@@ -42,6 +42,27 @@ typedef struct mymsgbuf {
 	int id;
 } mymsgbuf;
 
+typedef struct {
+	pid_t pid;
+	int proc_pid;
+	int m;
+} pcb;
+
+pcb* pcbptr;
+
+
+void signal_handler(int signo)
+{
+	if(signo==SIGUSR1)
+	{
+		printf("received SIGNAL\n");
+		// break from pause
+	}
+	if(signo==SIGUSR2)
+	{
+		pause();
+	}
+}
 
 int send_message( int qid, struct mymsgbuf *qbuf )
 {
@@ -50,7 +71,7 @@ int send_message( int qid, struct mymsgbuf *qbuf )
 	length = sizeof(struct mymsgbuf) - sizeof(long);
 	if ((result = msgsnd( qid, qbuf, length, 0)) == -1)
 	{
-		perror("Error in sending message");
+		perror("Error in sending message Scheduler send_message --");
 		exit(1);
 	}
 	return (result);
@@ -65,14 +86,14 @@ int read_message( int qid, long type, struct mymsgbuf *qbuf )
 
 	if ((result = msgrcv( qid, qbuf, length, type,  0)) == -1)
 	{// type- If msgtyp is greater than 0, then the first message in the queue of type msgtyp is read
-		perror("Error in receiving message");
+		perror("Error in receiving message Scheduler read_message");
 		exit(1);
 	}
 
 	return (result);
 }
 
-int read_message_mmu( int qid, long type,mmutosch *qbuf )
+int read_message_mmu( int qid, long type, mmutosch *qbuf )
 {
 	int result, length;
 	/* The length is essentially the size of the structure minus sizeof(mtype) */
@@ -80,16 +101,19 @@ int read_message_mmu( int qid, long type,mmutosch *qbuf )
 
 	if ((result = msgrcv(qid, qbuf, length, type,  0)) == -1)
 	{
-		perror("Error in receiving message");
+		printf("ERROR: %d\n", errno);
+		printf("qid: %d, type %d\n",qid, type );
+		perror("Error in receiving message Scheduler read_message_mmu");
 		exit(1);
 	}
+	printf("qid: %d, type %d\n",qid, type );
 	return (result);
 }
 
 int main(int argc , char * argv[])
 {
-	int mq1_key, mq2_key, master_pid;
-	if (argc < 5) {
+	int mq1_key, mq2_key, master_pid, pcbid;
+	if (argc < 6) {
 		printf("Scheduler rkey q2key k mpid\n");
 		exit(EXIT_FAILURE);
 	}
@@ -97,6 +121,9 @@ int main(int argc , char * argv[])
 	mq2_key = atoi(argv[2]);
 	k = atoi(argv[3]);
 	master_pid = atoi(argv[4]);
+	pcbid = atoi(argv[5]);
+
+	pcbptr = (pcb*)(shmat(pcbid, NULL, 0));
 
 	mymsgbuf msg_send, msg_recv;
 
@@ -114,17 +141,28 @@ int main(int argc , char * argv[])
 	}
 	printf("Total No. of Process received = %d\n", k);
 
-	//initialize the variables for running array
+	signal(SIGUSR1, signal_handler);
+	signal(SIGUSR2, signal_handler);
+
+	//initialize the variable
 	int terminated_process = 0; //to keep track of running process to exit at last
-	// int terminate[MAX_PROCESS];
+
 	while (1)
 	{
+		printf("\n======== SCH LOOP: ========\n");
 		// If msgtyp is greater than 0, then the first message in the queue of type msgtyp is read
 		read_message(mq1, FROMPROCESS, &msg_recv); // 10
 		int curr_id = msg_recv.id;
+		printf("sch read message for curr_id: %d\n", curr_id);
 
-		msg_send.mtype = TOPROCESS + curr_id; // 20
-		send_message(mq1, &msg_send); // not required after page fault
+		// msg_send.mtype = TOPROCESS + curr_id; // 20
+		// send_message(mq1, &msg_send); // not required after page fault
+		// printf("sent to mq1: %d\n", TOPROCESS+curr_id);
+
+		int curr_pid = pcbptr[curr_id].proc_pid;
+		printf("current pid: %d\n", curr_pid);
+		kill(curr_pid, SIGUSR1);
+		usleep(200); // maybe mmu is reading before sending
 
 		//recv messages from mmu
 		mmutosch mmu_recv;
@@ -134,12 +172,12 @@ int main(int argc , char * argv[])
 		{
 			msg_send.mtype = FROMPROCESS;
 			msg_send.id=curr_id;
-			send_message(mq1, &msg_send);
+			send_message(mq1, &msg_send); // enqueue current process
 		}
+		
 		else if (mmu_recv.mtype == TERMINATED)
 		{
 			terminated_process++;
-			//printf("Got terminate %d\n", curr_id);
 		}
 		else
 		{

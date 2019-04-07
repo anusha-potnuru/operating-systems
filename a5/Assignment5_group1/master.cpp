@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
+#include <bits/stdc++.h>
+using namespace std;
 
 typedef struct {
 	int frameno;
@@ -25,8 +27,10 @@ typedef struct {
 
 typedef struct {
 	pid_t pid;
+	int proc_pid;
 	int m;
 }pcb;
+
 
 typedef struct 
 {
@@ -203,13 +207,11 @@ void createPCBs()
 	int totpages = 0; // total no of pages req by all processes
 	for(i=0;i<k;i++)
 	{
-		ptr[i].pid = i;
+		ptr[i].pid = i+1; // added
 		ptr[i].m = rand()%m + 1;
-		// ptr[i].f_allo = 0;
 		totpages +=  ptr[i].m;
 	}
 
-	int allo_frame = 0;
 	printf("tot = %d, k = %d, f=  %d\n",totpages,k,f);
 
 	for(i=0;i<k;i++)
@@ -223,6 +225,7 @@ void createPCBs()
 		myexit(EXIT_FAILURE);
 	}
 }
+
 
 void clearResources()
 {
@@ -263,11 +266,12 @@ void createProcesses()
 {
 	pcb *ptr = (pcb*)(shmat(pcbid, NULL, 0));
 
-	int i,j;
+	int i,j, pid;
 	for(i=0;i<k;i++)
 	{
 		int rlen = rand()%(8*ptr[i].m) + 2*ptr[i].m + 1;
 		char rstring[m*20*40]; // ?? m*10*4
+		printf("\n\n\n==========PROCESS %d\n", i);
 		printf("Reference string length = %d\n",rlen);
 		int l = 0;
 		for(j=0;j<rlen;j++)
@@ -282,15 +286,19 @@ void createProcesses()
 			l += sprintf(rstring+l,"%d|",r); // writes it into rstring+l
 		}
 		printf("Ref string = %s\n",rstring);
-		if(fork() == 0)
+		pid = fork();
+		if(pid == 0)
 		{
 			char buf1[20],buf2[20],buf3[20];
-			sprintf(buf1,"%d",i); // process number
+			sprintf(buf1,"%d",i); // process number, added
 			sprintf(buf2,"%d",readykey);
 			sprintf(buf3,"%d",msgq3key);
 			execlp("./process","./process",buf1,buf2,buf3,rstring,(char *)(NULL));
 			exit(0);
-
+		}
+		else
+		{
+			ptr[i].proc_pid = pid;
 		}
 		//TODO: fork proecess here
 		usleep(250*1000);	
@@ -303,7 +311,14 @@ void timetoend(int sig)
 {
 	//printf("Mater: gi=o the signal\n");
 	sleep(1);
-	kill(spid, SIGTERM);
+	// kill(spid, SIGTERM);
+	int status;
+	int w = waitpid(spid, &status, 0);
+	if(w==-1)
+	{
+		perror("scheduler waitpid");
+		exit(1);
+	}
 	kill(mpid, SIGUSR2);
 	sleep(2);
 	flag = 1;
@@ -334,14 +349,18 @@ int main(int argc, char const *argv[])
 	createPCBs();
 	createMessageQueues();
 
+	printf("generating processes\n");
+	createProcesses();
+
 	if((spid = fork()) == 0)
 	{
-		char buf1[20],buf2[20],buf3[20],buf4[20];
+		char buf1[20],buf2[20],buf3[20],buf4[20], buf5[20];
 		sprintf(buf1,"%d",readykey);
 		sprintf(buf2,"%d",msgq2key);
 		sprintf(buf3,"%d",k);
 		sprintf(buf4,"%d",pid);
-		execlp("./scheduler","./scheduler",buf1,buf2,buf3,buf4,(char *)(NULL));
+		sprintf(buf5, "%d", pcbid); //added
+		execlp("./scheduler","./scheduler",buf1,buf2,buf3,buf4,buf5,(char *)(NULL));
 		exit(0);
 	}
 
@@ -359,8 +378,7 @@ int main(int argc, char const *argv[])
 		execlp("./mmu","./mmu",buf1,buf2,buf3,buf4,buf5,buf6,buf7,(char *)(NULL));
 		exit(0);
 	}
-	printf("generating processes\n");
-	createProcesses();
+	
 	if(flag == 0)
 		pause();
 	clearResources();
