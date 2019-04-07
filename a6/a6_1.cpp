@@ -190,7 +190,18 @@ int my_write(int fd, char *buf,int size, int flag)
 
 int find_free_block()
 {
-	for(i = 0)
+	while(1)
+	{
+		if(sb->bit_vector[free_ptr]==0)
+		{
+			break;
+		}
+		else
+		{
+			free_ptr = (free_ptr+1)%no_of_blocks;
+		}
+	}
+	return free_ptr;
 }
 
 int my_copy(int fd)
