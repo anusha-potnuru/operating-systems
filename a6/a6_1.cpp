@@ -178,6 +178,27 @@ int my_write(int fd, char *buf,int size, int flag)
 	}
 }
 
+int my_copy(int fd)
+{
+	directory *temp = sb->d;
+	int linux_fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
+	while(temp!=NULL)
+	{
+		if(temp->fd==fd)
+		{
+			break;
+		}
+		temp =temp->next;
+	} 
+	int bn = temp->block_no;
+	while(bn!=-1)
+	{
+		write(linux_fd, file_system[bn].b_data, strlen(file_system[bn].b_data));
+		bn = block1->arr[bn];
+	}
+	return linux_fd;
+}
+
 int main()
 {
 	int i;
