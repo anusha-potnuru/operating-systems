@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h> 
+#include <string>
+#include <stdio.h> 
 using namespace std;
 
 int file_system_size,block_size;
@@ -131,6 +133,7 @@ int my_close(int fd)
 
 int my_read(int fd, char *buf, int size)
 {
+	memset(buf, 0, sizeof(buf));
 	directory *temp = sb->d;
 	// directory *prev = sb->d;
 	// int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
@@ -153,12 +156,13 @@ int my_read(int fd, char *buf, int size)
 	while(size>block_size)
 	{
 		int minsize = min(block_size,strlen(file_system[bn].b_data));
-		strncat(buf,file_system[bn].b_data,size%block_size);
+		strncat(buf,file_system[bn].b_data, minsize);
+		// buf = buf+minsize;
 		ret += minsize;
 		size -= minsize;
 		if(block1->arr[bn]==-1)
 		{
-			break;	
+			return ret;
 		}
 		bn = block1->arr[bn];
 	}
@@ -199,10 +203,15 @@ int my_write(int fd, char *buf, int size, int flag)
 		}
 		
 		bn = find_free_block();
-		block1->arr[prev] = bn;
+		cout<<"free block found"<<endl;
+		cout<<"prev is :"<<prev<<endl;		
 		if(temp->block_no==-1)
 		{
 			temp->block_no=bn;
+		}
+		else
+		{
+			block1->arr[prev] = bn;
 		}
 		cout<<"free block found "<<bn<<" ";
 
@@ -234,12 +243,14 @@ int my_write(int fd, char *buf, int size, int flag)
 		cout<<"done"<<endl;
 
 		sb->bit_vector[bn]=1;
-		bn = find_free_block();
+		block1->arr[bn] = find_free_block();
+		bn = block1->arr[bn];
 		cout<<"block number "<<bn<<endl;
 		size -= block_size;
 	}
 	strncpy(file_system[bn].b_data,buf,size);
 	sb->bit_vector[bn]=1;
+	block1->arr[bn]=-1;
 	cout<<"exiting"<<endl;
 	return size;
 }
@@ -290,8 +301,30 @@ void my_cat(int fd)
 	return;
 }
 
+
+void readinput(char* buffer, int len)
+{
+	char c;
+	int i=0;
+	while(i<len-1)
+	{
+		scanf("%c", &c);
+		cout<<(int)c<<" ";
+		cout<<c;
+		if(c=='\n')
+		{
+			break;
+		}
+		buffer[i++]=c;
+	}	
+	buffer[i]='\0';
+	cout<<"returned"<<endl;
+	return;
+}
+
 int main()
 {
+
 	int i;
 	cin>>file_system_size>>block_size;
 	no_of_blocks = file_system_size/block_size;
@@ -324,9 +357,27 @@ int main()
 	char *buffer;
 	buffer = (char*)malloc(sizeof(char)*150);
 	cout<<"enter buffer"<<endl;
-	cin>>buffer;
-	cout<<"done"<<endl;
+
+	cin.ignore();
+	cin.clear();
+
+	readinput(buffer, 150);
+	// cin>>buffer;
+
+	// string str;
+	// getline(cin, str);
+	// strcpy(buffer, str.c_str());
+
+	// gets(buffer);
+	// scanf("%[^\n]*c",buffer);
+
+	cout<<"BUFFER:"<<endl;
+	cout<<buffer<<endl;
+	cout<<"string length of buffer"<<strlen(buffer)<<endl;
 	int size = my_write(fd,buffer,strlen(buffer),1);
 	my_cat(fd);
+	my_read(fd, buffer, 70);
+
+	cout<<"printing buffer"<<endl<<buffer<<endl;
 	return 0;
 }
