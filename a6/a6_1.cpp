@@ -7,6 +7,8 @@ using namespace std;
 
 int file_system_size,block_size;
 int no_of_blocks;
+int f=0;
+int free_ptr;
 
 typedef struct 
 {
@@ -48,12 +50,12 @@ int my_open(char* path)
 {
 	directory *temp = sb->d;
 	directory *prev = sb->d;
-	int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
+	// int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
 	while(temp!=NULL)
 	{
 		if(strcmp(temp->file_name,path)==0)
 		{
-			return fd;
+			return temp->fd;
 		}
 		prev = temp;
 		temp =temp->next;
@@ -63,7 +65,9 @@ int my_open(char* path)
 	strcpy(node->file_name,path);
 	// doubt
 	node->block_no = -1; 
-	node->fd = fd;
+	node->fd = f;
+	// to increase value of fd for next file
+	f++;
 	node->next=NULL;
 	prev->next = node;
 	return fd;
@@ -174,8 +178,19 @@ int my_write(int fd, char *buf,int size, int flag)
 	}
 	while(size>block_size)
 	{
-		
+		strncpy(buf,file_system[bn].b_data,block_size);
+		sb->bit_vector[bn]=1;
+		bn = find_free_block();
+		size -= block_size;
 	}
+	strncpy(buf,file_system[bn].b_data,size);
+	sb->bit_vector[bn]=1;
+	return size;
+}
+
+int find_free_block()
+{
+	for(i = 0)
 }
 
 int main()
