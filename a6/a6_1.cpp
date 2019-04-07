@@ -80,7 +80,7 @@ int my_open(char* path)
 	} 
 	directory *node = (directory*)malloc(sizeof(directory));
 	// node->file_name = (char*)malloc(sizeof(char)*)
-	strcpy(node->file_name,path);
+	strcpy(node->file_name, path);
 	// doubt
 	node->block_no = -1; 
 	node->fd = f;
@@ -249,7 +249,6 @@ void my_cat(int fd)
 	cout<<endl;
 	return;
 }
-
 
 int main()
 {
