@@ -197,12 +197,15 @@ int my_write(int fd, char *buf, int size, int flag)
 			prev = bn;
 			bn = block1->arr[bn];
 		}
+		
 		bn = find_free_block();
 		block1->arr[prev] = bn;
-
 		if(temp->block_no==-1)
-			temp->block_no = bn;
-		cout<<"if done"<<endl;
+		{
+			temp->block_no=bn;
+		}
+		cout<<"free block found "<<bn<<" ";
+
 	}
 	else if(flag==0)
 	{
@@ -213,6 +216,7 @@ int my_write(int fd, char *buf, int size, int flag)
 		}
 		bn = find_free_block();
 		temp->block_no = bn;
+		cout<<"free block found "<<bn<<" ";
 	}
 	else
 	{
@@ -222,9 +226,13 @@ int my_write(int fd, char *buf, int size, int flag)
 	cout<<"block number "<<bn<<endl;
 	while(size>block_size)
 	{
-		cout<<"size "<<size<<endl;
-		strncpy(file_system[bn].b_data, buf, block_size);
+		cout<<"size = "<<size<<endl;
+		cout<<"buffer = "<<buf<<endl;
+		strncpy(file_system[bn].b_data,buf,block_size);
+		cout<<file_system[bn].b_data;
 		buf = buf+block_size;
+		cout<<"done"<<endl;
+
 		sb->bit_vector[bn]=1;
 		bn = find_free_block();
 		cout<<"block number "<<bn<<endl;
@@ -232,6 +240,7 @@ int my_write(int fd, char *buf, int size, int flag)
 	}
 	strncpy(file_system[bn].b_data,buf,size);
 	sb->bit_vector[bn]=1;
+	cout<<"exiting"<<endl;
 	return size;
 }
 
@@ -271,7 +280,7 @@ void my_cat(int fd)
 		cout<<temp->fd<<" ";
 	} 
 	int bn = temp->block_no;
-	cout<<"block number"<<bn<<endl;
+	cout<<"block number "<<bn<<endl;
 	while(bn!=-1)
 	{
 		cout<<file_system[bn].b_data;
@@ -307,8 +316,8 @@ int main()
 	sb->disk_block_size = block_size;
 	sb->d = NULL;
 
-	sb->bit_vector[0] = -1;
-	sb->bit_vector[1]= -1;
+	sb->bit_vector[0]=-1;
+	sb->bit_vector[1]=-1;
 
 	int fd = my_open("abc.txt");
 	cout<<"fd of file is "<<fd;
