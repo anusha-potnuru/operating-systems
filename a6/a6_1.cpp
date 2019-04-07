@@ -46,6 +46,24 @@ int min(int a, int b)
 	return a>b?b:a;
 }
 
+
+int find_free_block()
+{
+	while(1)
+	{
+		if(sb->bit_vector[free_ptr]==0)
+		{
+			break;
+		}
+		else
+		{
+			free_ptr = (free_ptr+1)%no_of_blocks;
+		}
+	}
+	return free_ptr;
+}
+
+
 int my_open(char* path)
 {
 	directory *temp = sb->d;
@@ -186,22 +204,6 @@ int my_write(int fd, char *buf,int size, int flag)
 	strncpy(buf,file_system[bn].b_data,size);
 	sb->bit_vector[bn]=1;
 	return size;
-}
-
-int find_free_block()
-{
-	while(1)
-	{
-		if(sb->bit_vector[free_ptr]==0)
-		{
-			break;
-		}
-		else
-		{
-			free_ptr = (free_ptr+1)%no_of_blocks;
-		}
-	}
-	return free_ptr;
 }
 
 int my_copy(int fd)
