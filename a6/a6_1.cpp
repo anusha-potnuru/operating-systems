@@ -73,6 +73,7 @@ int my_open(const char *path)
 	// int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
 	if(prev == NULL)
 	{
+		cout<<"head node"<<endl;
 		strcpy(node->file_name,path);
 		node->block_no = -1; 
 		node->fd = f;
@@ -322,13 +323,13 @@ int main()
 	block1 = (fat*)malloc(sizeof(fat));
 	block1->arr = (int*)malloc(sizeof(int)*no_of_blocks);
 	block1 = (fat*)&(file_system[1]);
-	directory *dir = (directory*)malloc(sizeof(directory));
+	// directory *dir = (directory*)malloc(sizeof(directory));
 	// creating superblock
 	sb = (superblock*)malloc(sizeof(superblock)+sizeof(bool)*no_of_blocks);
 	sb = (superblock*)&file_system[0];
 	sb->file_system_size = file_system_size;
 	sb->disk_block_size = block_size;
-	sb->d = dir;
+	sb->d = NULL;
 	int fd = my_open("abc.txt");
 	cout<<"fd of file is "<<fd;
 	char *buffer;
