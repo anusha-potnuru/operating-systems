@@ -88,7 +88,7 @@ int my_open(char* path)
 	f++;
 	node->next=NULL;
 	prev->next = node;
-	return fd;
+	return node->fd;
 }
 
 int my_close(int fd)
@@ -226,6 +226,7 @@ int my_copy(int fd)
 	}
 	return linux_fd;
 }
+
 
 int main()
 {
