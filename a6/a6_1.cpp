@@ -8,7 +8,7 @@ using namespace std;
 int file_system_size,block_size;
 int no_of_blocks;
 int f=0;
-int free_ptr;
+int free_ptr=0;
 
 typedef struct 
 {
@@ -64,30 +64,44 @@ int find_free_block()
 }
 
 
-int my_open(char* path)
+int my_open(const char *path)
 {
 	directory *temp = sb->d;
 	directory *prev = sb->d;
-	// int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
-	while(temp!=NULL)
-	{
-		if(strcmp(temp->file_name,path)==0)
-		{
-			return temp->fd;
-		}
-		prev = temp;
-		temp =temp->next;
-	} 
+	cout<<"in my open"<<endl;
 	directory *node = (directory*)malloc(sizeof(directory));
-	// node->file_name = (char*)malloc(sizeof(char)*)
-	strcpy(node->file_name,path);
-	// doubt
-	node->block_no = -1; 
-	node->fd = f;
-	// to increase value of fd for next file
-	f++;
-	node->next=NULL;
-	prev->next = node;
+	// int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
+	if(prev == NULL)
+	{
+		strcpy(node->file_name,path);
+		node->block_no = -1; 
+		node->fd = f;
+		f++;
+		node->next=NULL;
+		prev = node;
+	}
+	else
+	{
+		while(temp!=NULL)
+		{
+			if(strcmp(temp->file_name,path)==0)
+			{
+				return temp->fd;
+			}
+			prev = temp;
+			temp =temp->next;
+		} 
+		// directory *node = (directory*)malloc(sizeof(directory));
+		// node->file_name = (char*)malloc(sizeof(char)*)
+		strcpy(node->file_name,path);
+		// doubt
+		node->block_no = -1; 
+		node->fd = f;
+		// to increase value of fd for next file
+		f++;
+		node->next=NULL;
+		prev->next = node;
+	}
 	return node->fd;
 }
 
@@ -158,14 +172,16 @@ int my_read(int fd, char *buf, int size)
 // 1 -append 0-overwrite
 int my_write(int fd, char *buf,int size, int flag)
 {
+	cout<<"in my write"<<endl;
 	directory *temp = sb->d;
+
 	while(temp!=NULL)
 	{
+		cout<<temp->fd<<" ";
 		if(temp->fd==fd)
 		{
 			break;
 		}
-		// prev = temp;
 		temp =temp->next;
 	} 
 	int bn = temp->block_no;
@@ -194,11 +210,13 @@ int my_write(int fd, char *buf,int size, int flag)
 		cout<<"invalid flag";
 		return -1;
 	}
+	cout<<"block number "<<bn<<endl;
 	while(size>block_size)
 	{
 		strncpy(buf,file_system[bn].b_data,block_size);
 		sb->bit_vector[bn]=1;
 		bn = find_free_block();
+		cout<<"block number "<<bn<<endl;
 		size -= block_size;
 	}
 	strncpy(buf,file_system[bn].b_data,size);
@@ -239,8 +257,10 @@ void my_cat(int fd)
 			break;
 		}
 		temp =temp->next;
+		cout<<temp->fd<<" ";
 	} 
 	int bn = temp->block_no;
+	cout<<"block number"<<bn<<endl;
 	while(bn!=-1)
 	{
 		cout<<file_system[bn].b_data;
@@ -276,6 +296,14 @@ int main()
 	sb->file_system_size = file_system_size;
 	sb->disk_block_size = block_size;
 	sb->d = dir;
-
+	int fd = my_open("abc.txt");
+	cout<<"fd of file is "<<fd;
+	char *buffer;
+	buffer = (char*)malloc(sizeof(char)*150);
+	cout<<"enter buffer"<<endl;
+	cin>>buffer;
+	cout<<"done"<<endl;
+	int size = my_write(fd,buffer,strlen(buffer),1);
+	my_cat(fd);
 	return 0;
 }
