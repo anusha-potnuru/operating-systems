@@ -229,10 +229,9 @@ int my_copy(int fd)
 	return linux_fd;
 }
 
-int my_cat(int fd)
+void my_cat(int fd)
 {
 	directory *temp = sb->d;
-	int linux_fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
 	while(temp!=NULL)
 	{
 		if(temp->fd==fd)
@@ -244,10 +243,11 @@ int my_cat(int fd)
 	int bn = temp->block_no;
 	while(bn!=-1)
 	{
-		write(linux_fd, file_system[bn].b_data, strlen(file_system[bn].b_data));
+		cout<<file_system[bn].b_data;
 		bn = block1->arr[bn];
 	}
-	return linux_fd;
+	cout<<endl;
+	return;
 }
 
 
