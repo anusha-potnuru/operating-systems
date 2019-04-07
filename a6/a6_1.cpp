@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h> 
+#include <stdio.h>
+
 using namespace std;
 
 int file_system_size,block_size;
@@ -123,14 +125,20 @@ int my_close(int fd)
 	if(temp!=NULL)
 	{
 		prev->next = temp->next;
+		temp->block_no = -1;
 		free(temp);
 	}
-	return close(fd);
+	else
+	{
+		return -1;
+	}
+	return 0;
 }
 
 int my_read(int fd, char *buf, int size)
 {
 	directory *temp = sb->d;
+	memset(buf ,'\0',size);
 	// directory *prev = sb->d;
 	// int fd = open(path, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
 	while(temp!=NULL)
@@ -152,12 +160,12 @@ int my_read(int fd, char *buf, int size)
 	while(size>block_size)
 	{
 		int minsize = min(block_size,strlen(file_system[bn].b_data));
-		strncat(buf,file_system[bn].b_data,size%block_size);
+		strncat(buf,file_system[bn].b_data,minsize);
 		ret += minsize;
 		size -= minsize;
 		if(block1->arr[bn]==-1)
 		{
-			break;	
+			return ret;	
 		}
 		bn = block1->arr[bn];
 	}
@@ -196,10 +204,14 @@ int my_write(int fd, char *buf,int size, int flag)
 		}
 		
 		bn = find_free_block();
-		block1->arr[prev] = bn;
+		
 		if(temp->block_no==-1)
 		{
 			temp->block_no=bn;
+		}
+		else
+		{
+			block1->arr[prev] = bn;
 		}
 		cout<<"free block found "<<bn<<" ";
 	}
@@ -220,21 +232,25 @@ int my_write(int fd, char *buf,int size, int flag)
 		return -1;
 	}
 	cout<<"block number "<<bn<<endl;
+	cout<<"size  = "<<size;
 	while(size>block_size)
 	{
 		cout<<"size = "<<size<<endl;
 		cout<<"buffer = "<<buf<<endl;
 		strncpy(file_system[bn].b_data,buf,block_size);
-		cout<<file_system[bn].b_data;
+		cout<<file_system[bn].b_data<<endl;
 		buf = buf+block_size;
 		cout<<"done"<<endl;
 		sb->bit_vector[bn]=1;
-		bn = find_free_block();
+		block1->arr[bn] = find_free_block();
+		bn = block1->arr[bn];
 		cout<<"block number "<<bn<<endl;
 		size -= block_size;
 	}
 	strncpy(file_system[bn].b_data,buf,size);
+	cout<<file_system[bn].b_data<<endl;
 	sb->bit_vector[bn]=1;
+	block1->arr[bn] = -1;
 	cout<<"exiting"<<endl;
 	return size;
 }
@@ -275,9 +291,10 @@ void my_cat(int fd)
 		cout<<temp->fd<<" ";
 	} 
 	int bn = temp->block_no;
-	cout<<"block number "<<bn<<endl;
+	
 	while(bn!=-1)
 	{
+		// cout<<"block number "<<bn<<endl;
 		cout<<file_system[bn].b_data;
 		bn = block1->arr[bn];
 	}
@@ -285,6 +302,25 @@ void my_cat(int fd)
 	return;
 }
 
+void readinput(char* buffer, int len)
+{
+	char c;
+	int i=0;
+	while(i<len-1)
+	{
+		scanf("%c", &c);
+		// cout<<(int)c<<" ";
+		cout<<c;
+		if(c=='\n')
+		{
+			break;
+		}
+		buffer[i++]=c;
+	}	
+	buffer[i]='\0';
+	cout<<"returned"<<endl;
+	return;
+}
 
 int main()
 {
@@ -313,14 +349,51 @@ int main()
 	sb->d = NULL;
 	sb->bit_vector[0]=-1;
 	sb->bit_vector[1]=-1;
-	int fd = my_open("abc.txt");
-	cout<<"fd of file is "<<fd;
+	
+	// cout<<"fd of file is "<<fd;
 	char *buffer;
 	buffer = (char*)malloc(sizeof(char)*150);
 	cout<<"enter buffer"<<endl;
-	cin>>buffer;
+
+	cin.ignore();
+	cin.clear();
+
+	readinput(buffer, 150);
+
+	// scanf("%[^\n]%*c",buffer);
+	cout<<"buf="<<buffer;
 	cout<<"done"<<endl;
+	int fd = my_open("abc.txt");
+	cout<<"fd of file is "<<fd;
 	int size = my_write(fd,buffer,strlen(buffer),1);
 	my_cat(fd);
+	size = my_read(fd,buffer,60);
+	cout<<"after reading\n"<<buffer;
+	size = my_copy(fd);
+	// size = my_close(fd);
+	// cout<<size;
+	cout<<"after closing"<<endl;
+	size = my_read(fd,buffer,60);
+	cout<<size;
+	int fd1 = my_open("file.txt");
+	cout<<"fd of file is "<<fd1;
+	cout<<"enter buffer"<<endl;
+
+	// cin.ignore();
+	// cin.clear();
+
+	readinput(buffer, 150);
+	cout<<buffer;
+	int size1 = my_write(fd,buffer,strlen(buffer),1);
+	cout<<"after cating"<<endl;
+	my_cat(fd1);
+	size1 = my_read(fd1,buffer,60);
+	cout<<"after reading\n"<<buffer;
+	size1 = my_copy(fd1);
+	size1 = my_close(fd1);
+	cout<<size1;
+	cout<<"after closing"<<endl;
+	size1 = my_read(fd1,buffer,60);
+	cout<<size1;
 	return 0;
 }
