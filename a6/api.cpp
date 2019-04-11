@@ -7,14 +7,18 @@
 #include <stdio.h> 
 using namespace std;
 
-int file_system_size,block_size;
-int no_of_blocks;
+
+int file_system_size=INT_MAX;
+int block_size=64;
+int no_of_blocks=INT_MAX/64;
 int f=0;
 int free_ptr=0;
 
+
+
 typedef struct 
 {
-	char *b_data;
+	char b_data[64];
 }block;
 
 typedef struct directory
@@ -31,17 +35,19 @@ typedef struct
 	int file_system_size;
 	char volume_name[50];
 	directory *d;
-	bool bit_vector[];
+	bool bit_vector[INT_MAX/64];
 }superblock;
 
 typedef struct fat
 {
-	int *arr;
+	int arr[INT_MAX/64];
 }fat;
 
 superblock* sb;
 block* file_system;
 fat* block1;
+
+block[no_of_blocks] file_system;
 
 int min(int a, int b)
 {
@@ -203,8 +209,8 @@ int my_write(int fd, char *buf, int size, int flag)
 		}
 		
 		bn = find_free_block();
-		// cout<<"free block found"<<endl;
-		// cout<<"prev is :"<<prev<<endl;
+		cout<<"free block found"<<endl;
+		// cout<<"prev is :"<<prev<<endl;		
 		if(temp->block_no==-1)
 		{
 			temp->block_no=bn;
@@ -213,19 +219,20 @@ int my_write(int fd, char *buf, int size, int flag)
 		{
 			block1->arr[prev] = bn;
 		}
-		// cout<<"free block found "<<bn<<" ";
+		cout<<"free block found "<<bn<<" ";
 
 	}
 	else if(flag==0)
 	{
 		while(bn!=-1)
 		{
-			file_system[bn].b_data = '\0';
+			// file_system[bn].b_data = '\0';
+			memset(file_system[bn].b_data, 0, sizeof(file_system[bn].b_data));
 			bn = block1->arr[bn];
 		}
 		bn = find_free_block();
 		temp->block_no = bn;
-		// cout<<"free block found "<<bn<<" ";
+		cout<<"free block found "<<bn<<" ";
 	}
 	else
 	{
@@ -326,20 +333,20 @@ int main()
 {
 
 	int i;
-	cin>>file_system_size>>block_size;
-	no_of_blocks = file_system_size/block_size;
+	// cin>>file_system_size>>block_size;
+	// no_of_blocks = file_system_size/block_size;
 
 	// int fat[no_of_blocks];
 	
-	file_system = (block*)malloc(sizeof(block)*no_of_blocks); 
-	for(i=0;i<no_of_blocks;i++)
-	{
-		file_system[i].b_data = (char*)malloc(sizeof(char)*block_size);
-	}
+	// file_system = (block*)malloc(sizeof(block)*no_of_blocks); 
+	// for(i=0;i<no_of_blocks;i++)
+	// {
+	// 	file_system[i].b_data = (char*)malloc(sizeof(char)*block_size);
+	// }
 
 	
 	block1 = (fat*)malloc(sizeof(fat));
-	block1->arr = (int*)malloc(sizeof(int)*no_of_blocks);
+	// block1->arr = (int*)malloc(sizeof(int)*no_of_blocks);
 	block1 = (fat*)&(file_system[1]);
 	// directory *dir = (directory*)malloc(sizeof(directory));
 	// creating superblock
@@ -358,19 +365,26 @@ int main()
 	buffer = (char*)malloc(sizeof(char)*150);
 	cout<<"enter buffer"<<endl;
 
-	cin.ignore();
-	cin.clear();
+	// cin.ignore();
+	// cin.clear();
 
 	readinput(buffer, 150);
+	// cin>>buffer;
+
+	// string str;
+	// getline(cin, str);
+	// strcpy(buffer, str.c_str());
+
+	// gets(buffer);
+	// scanf("%[^\n]*c",buffer);
 
 	cout<<"BUFFER:"<<endl;
 	cout<<buffer<<endl;
 	cout<<"string length of buffer"<<strlen(buffer)<<endl;
 	int size = my_write(fd,buffer,strlen(buffer),1);
-	cout<<"CONTENTS\n";
 	my_cat(fd);
-	// my_read(fd, buffer, 70);
+	my_read(fd, buffer, 70);
 
-	// cout<<"printing buffer"<<endl<<buffer<<endl;
+	cout<<"printing buffer"<<endl<<buffer<<endl;
 	return 0;
 }

@@ -1,0 +1,30 @@
+Potnuru Anusha
+16CS30027
+
+Implement a Memory Resident File System
+Alternative 1: (Linked List Implementation using FAT)
+
+• The file system is created on a dynamically allocated memory block (created using malloc()).
+• The size of the file system and the block size are hardcoded as INT_MAX and 64 during file system creation.
+• The first block (Block-0) in the file system contains the Super Block, and will contain relevant information about the file system.
+• The Super Block will contain information about the file system, like disk block size, total size of the file system, volume name, and bit vector.
+• The free blocks are stored in a bit vector pointer stored in superblock. If the i-th bit is 0, then block i is free; else, it is occupied.
+• File Allocation Table (FAT) is be stored in Data Block-1.
+• The directory is stored in a fixed block (with pointer in super block) as it is single-level directory. 
+  Each directory entry contains a number that is an index to FAT, and indicates the first block 
+  in the file. If the i-th entry of FAT contains j, this means block-j logically follows block-I 
+  in the file.
+
+FUNCTIONS:
+• my_open: checks in directory, if exists, it opens the file with new fd. 
+If not present also, it opens it with new fd.
+• my_close: removes the directory entry with corresponding fd in the directory pointer. 
+It removes all the data blocks allocated to this directory entry and removes the pointers in FAT 
+and also places these blocks in bit vector as free.
+• my_read: reads the file and returns it in the passed pointer buffer with given length limit.
+It reads the blocks by making a pass through FAT using directory entry first block no.
+• my_write: reads passed pointer buffer with given length limit and writes the data into file.
+It writes the blocks by making a pass through FAT using directory entry first block no and using 
+function find_free_block()
+• my_copy: copies the file from our file system to linux file system. 
+• my_cat: displays the content by making a pass through FAT using directory entry first block no.
