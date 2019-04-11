@@ -1,0 +1,29 @@
+P.V.S.L. Hari Chandana
+16CS30026
+
+A memory-resident file system in a memory block has been implemented. The disk has been be
+simulated as a set of contiguous blocks in memory. 
+It has the following features
+• The file system has been created on a dynamically allocated memory block
+
+• The first block in the file system contains the Super Block, and will contain relevant
+information about the file system auch as disk block size, total size of
+the file system, volume name, bit vector.
+• The free blocks are maintained as a bit vector stored in the super block. The number of bits
+are equal to the number of blocks in the file system. If the i-th bit is 0, then block i is free;
+else, it is occupied.
+• The data blocks of a file are maintained using a system-wide File Allocation Table,
+which is stored in Block-1.
+• The directory is stored in a fixed block. Each directory entry contains a number that is an index to FAT, and indicates the
+first block in the file. If the i-th entry of FAT contains j, this means block-j logically follows
+block-i in the file.
+• The data blocks are stored from Block-2 onwards
+
+• my_open - opens a file for reading/writing and creates it if not exist and return a global file descriptor.
+• my_close - closes an already open file clears all corresponding blocks and clears the corresponding fat entries and removes the file entry form the directory
+• my_read - reads data from an already open file. Iteratively loops over the fat blocks to find the next block and reads the data into a buffer.
+• my_write- writes or appends data into an already open file depending on the flag provided. Finds the free blocks using the bit vector and allocates the data into them from the buffer.
+• my_copy- copies a file between Linux file system and my file system
+• my_cat- displays the contents of the specified file on the terminal
+
+Some helper functions have been written such as readLine which read input from user and init function which initialises and dynamically allocates all data structures. Also find_free_block parses the bit vector from the previous pointer to find a free block.
