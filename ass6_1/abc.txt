@@ -1,0 +1,1 @@
+Scheduler selects the first process from ready queue, removes it from the queue
