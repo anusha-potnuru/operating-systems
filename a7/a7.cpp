@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string.h>
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -90,22 +91,22 @@ int find_free_inode()
 	return -1;
 }
 
-bool check_valid_directory(char* name)
+directory* check_valid_directory(char* name)
 {
 	for(int i=0; i<dir_list.size();i++)
 	{
 		if(strcmp(dir_list[i]->d_name, name) ==0)
 		{
-			return true;			
+			return dir_list[i];		
 		}
 	}
-	return false;
+	return NULL;
 }
 
 directory* get_parent(char* path)
 {
 	char *file;
-	char *word = strtok(path, '/');
+	char *word = strtok(path, "/");
 	char *current;
 	strcpy(current, cwd);
 	char *parent;
@@ -120,19 +121,19 @@ directory* get_parent(char* path)
 		}
 		else if(count==1)
 		{
-			strcat(current,'/');
+			strcat(current,"/");
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
 				printf("invalid path\n");
-				return -1;
+				return NULL;
 			}
 			file = word;
 		}
 		else 
 		{
 			strcpy(parent, current);
-			strcat(current,'/');
+			strcat(current,"/");
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
@@ -147,7 +148,7 @@ directory* get_parent(char* path)
 
 	for(int j=0; j<dir_list.size(); j++)
 	{
-		if( strcmp(dir_list[j]->path , current)==0)
+		if( strcmp(dir_list[j]->d_name , current)==0)
 		{
 			return dir_list[j];
 		}
@@ -158,7 +159,7 @@ directory* get_parent(char* path)
 int my_open(char* path)
 {
 	char *file;
-	char *word = strtok(path, '/');
+	char *word = strtok(path, "/");
 	char *current;
 	strcpy(current, cwd);
 	char *parent;
@@ -172,7 +173,7 @@ int my_open(char* path)
 		}
 		else if(count==1)
 		{
-			strcat(current,'/');
+			strcat(current,"/");
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
@@ -183,10 +184,10 @@ int my_open(char* path)
 		}
 		else
 		{
-			// strcat(parent,'/');
+			// strcat(parent,"/");
 			// strcat(parent,current);
 			strcpy(parent, current);
-			strcat(current,'/');
+			strcat(current,"/");
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
@@ -203,9 +204,9 @@ int my_open(char* path)
 	int flag=0;
 	char* temp;
 	temp = strdup(cwd);
-	open_file* tempnode, prev;
+	open_file* tempnode, *prev;
 	
-	open_file* node = new open_file*;
+	open_file* node = new open_file;
 	// node->inode_no = i_no;
 	strcpy(node->path , strcat(temp,path)); //temp has full path now
 	node->fd = fd++;
@@ -239,22 +240,24 @@ int my_open(char* path)
 
 	// create inode
 	inode_list[i_no].type=0;
-	strcpy(inode_list[i_no].file_name, file);
+	// strcpy(inode_list[i_no].file_name, file);
+	inode_list[i_no].file_size=0;
 
 	int k, flag1=0;
 	// keep record in direc
+	directory* cur_dir = check_valid_directory(current);
 	if(flag==0)
 	{
 		for(k=0 ; k<block_size/16 ; k++)
 		{
-			if(current.r[k].inode_no==-1)
+			if(cur_dir->r[k].inode_no==-1)
 			{
 				flag1=1;
 				break;
 			}
 		}
 		if(flag1==1)
-			current.r[k] = r;
+			cur_dir->r[k] = r;
 		else
 			cout<<"no free record\n";
 	}
@@ -292,18 +295,18 @@ int mkdir(char* path)
 	fpath = strdup(cwd);
 	strcpy(dir.d_name,  strcat(fpath, path));
 
-	dir.dot = dir;
+	dir.dot = &dir;
 	dir.ddot = get_parent(path);
 
 	if(dir.ddot==NULL)
 		return -1;
 
-	inode* i = find_free_inode();
-	i->type = 1;
-	i->single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
-	i->file_size=-1;
+	int i = find_free_inode();
+	inode_list[i].type = 1;
+	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
+	inode_list[i].file_size=-1;
 
-	dir.r = (record*)(i->single_ptr);
+	dir.r = (record*)(inode_list[i].single_ptr);
 	record* temp = dir.r;
 	int k, n=1;
 	for(k=0;k< n*block_size/16; k++)
@@ -319,7 +322,7 @@ int chdir(char* path)
 {//full path
 	if(check_valid_directory(path))
 	{
-		cwd = path;
+		strcpy(cwd, path);
 		return 1;
 	}
 	else
@@ -349,19 +352,19 @@ void init()
 
 	// create root direc
 	strcpy(root_direc.d_name, "root");
-	root_direc.dot = root_direc;
+	root_direc.dot = &root_direc;
 	root_direc.ddot = NULL;
-	inode* i = find_free_inode();
-	i->type = 1;
-	i->single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
-	i->file_size=-1; 
+	int i = find_free_inode();
+	inode_list[i].type = 1;
+	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
+	inode_list[i].file_size=-1; 
 
-	root_direc.r = (record*)(i->single_ptr);
-	record* temp = root_direc.r;
+	root_direc.r = (record*)(inode_list[i].single_ptr);
+	record* rtemp = root_direc.r;
 	int k, n=1;
 	for(k=0;k< n*block_size/16; k++)
 	{
-		temp[k].inode_no = -1;
+		rtemp[k].inode_no = -1;
 	}
 	dir_list.push_back(&root_direc);
 
