@@ -1,6 +1,9 @@
 #include <iostream>
 #include <string.h>
 #include <bits/stdc++.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h> 
 
 using namespace std;
 #define SIZE 64
@@ -110,37 +113,39 @@ int my_read(int fd, char *buf, int size)
 		{
 			return ret;
 		}
-		strncat(buf,inode_list[i_no].dir_ptr[j].b_data,block_size);
+		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,block_size);
 		j++;
 		size = size - block_size;
 		ret += block_size;
 	}
 	if(j<5 && size < block_size)
 	{
-		strncat(buf,inode_list[i_no].dir_ptr[j].b_data,size);
+		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,size);
 		ret += size;
 	}
 	if(j>=5 && size)
 	{
 		j = 0;
+		block** sptr;
 		if(inode_list[i_no].single_ptr==NULL)
 		{
 			return ret;
 		}
+		sptr = (block**)inode_list[i_no].single_ptr->b_data;
 		while(j< block_size/sizeof(int) && size>=block_size)
 		{
-			if(inode_list[i_no].single_ptr->b_data[j]==NULL)
+			if(sptr[j]==NULL)
 			{
 				return ret;
 			}
-			strncat(buf,inode_list[i_no].single_ptr->b_data[j].b_data,block_size);
+			strncat(buf,sptr[j]->b_data,block_size);
 			j++;
 			size = size - block_size;
 			ret += block_size;
 		}
 		if(j<block_size/sizeof(int) && size<block_size)
 		{
-			strncat(buf,inode_list[i_no].single_ptr->b_data[j].b_data,size);
+			strncat(buf,sptr[j]->b_data,size);
 			ret += size;
 		}
 	}
@@ -148,23 +153,27 @@ int my_read(int fd, char *buf, int size)
 	{
 		j = 0;
 		int k = 0;
+		block** dptr;
+		block** dsptr;
 		if(inode_list[i_no].double_ptr==NULL)
 		{
 			return ret;
 		}
 		while(j<block_size/sizeof(int) && size>=block_size)
 		{
-			if(inode_list[i_no].double_ptr->b_data[j]==NULL)
+			dptr = (block**)inode_list[i_no].double_ptr->b_data;	
+			if(dptr[j]==NULL)
 			{
 				return ret;
 			}
+			dsptr = (block**)dptr[j]->b_data;
 			while(k<block_size/sizeof(int) && size>=block_size)
 			{
-				if(inode_list[i_no].double_ptr->b_data[j].b_data[k]==NULL)
+				if(dsptr[k]==NULL)
 				{
 					return ret;
 				}
-				strncat(buf,inode_list[i_no].double_ptr->b_data[j].b_data[k].b_data,block_size);
+				strncat(buf,dsptr[k]->b_data,block_size);
 				j++;
 				size = size - block_size;
 				ret += block_size;
@@ -173,12 +182,74 @@ int my_read(int fd, char *buf, int size)
 		}
 		if(j<block_size/sizeof(int) && k< block_size/sizeof(int) && size<block_size)
 		{
-			strncat(buf,inode_list[i_no].double_ptr->b_data[j].b_data[k].b_data,size);
+			strncat(buf,dsptr[k]->b_data,size);
 			ret += size;
 		}
 	}
 	return ret;
 
+}
+
+int my_copy(int fd,char *path)
+{
+	open_file *temp;
+	temp = open_file_list;
+	int flag=0;
+	while(temp!=NULL)
+	{
+		if(temp->fd ==fd)
+		{
+			flag = 1;
+			break;
+		}
+		temp = temp->next;
+	}
+	if(flag == 0)
+	{
+		cout<<"error file doesnt exist"<<endl;
+		return -1;
+	}
+	int i_no = temp->inode_no;
+	int file_size = inode_list[i_no].file_size;
+	char *buf;
+	buf = (char*)malloc(sizeof(char)*file_size);
+	my_read(fd,buf,file_size);
+	char file_name[150];
+	strcpy(file_name,cwd);
+	strcat(file_name,path);
+	int linux_fd = open(file_name, O_WRONLY| O_CREAT|O_TRUNC,S_IRWXU);
+	write(linux_fd, buf, file_size);
+	return linux_fd;
+
+}
+
+
+int my_cat(int fd)
+{
+	open_file *temp;
+	temp = open_file_list;
+	int flag=0;
+	while(temp!=NULL)
+	{
+		if(temp->fd ==fd)
+		{
+			flag = 1;
+			break;
+		}
+		temp = temp->next;
+	}
+	if(flag == 0)
+	{
+		cout<<"error file doesnt exist"<<endl;
+		return -1;
+	}
+	int i_no = temp->inode_no;
+	int file_size = inode_list[i_no].file_size;
+	char *buf;
+	buf = (char*)malloc(sizeof(char)*file_size);
+	my_read(fd,buf,file_size);
+	cout<<buf<<endl;
+	
 }
 
 int find_free_inode()
