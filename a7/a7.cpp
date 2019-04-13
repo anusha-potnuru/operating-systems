@@ -682,14 +682,111 @@ int my_rmdir(char* path)
 
 				for(int j=0 ; j< sizeof(block_size)/16 ; j++)
 				{
-					if( (*it)->r.inode_no!=-2)
-					{ // remove all those blocks and add freeblockptr
+					if( inode_list[(*it)->r[j].inode_no].file_size==-2)
+					{ 
+						break;
+					}
+					else if( inode_list[(*it)->r[j].inode_no].file_size==-1)
+					{
+						if(my_rmdir((*it)->r[j].file_name)==-1)
+						{
+							return -1;
+						}
+					}
+					else
+					{
+						int i_no = (*it)->r[j].inode_no;
+						int size =  inode_list[(*it)->r[j].inode_no].file_size;
+						open_file *temp,*prev;
+						temp = open_file_list;
+						prev = open_file_list;
+						int flag=0;
+						while(temp!=NULL)
+						{
+							if(temp->i_node == i_no)
+							{
+								prev->next = temp->next;
+								free(temp);
+								temp = prev;
+							}
+							prev = temp;
+							temp = temp->next;
+						}
+						while(j < 5 && size>=block_size)
+						{
+							if(inode_list[i_no].dir_ptr[j]==NULL)
+							{
+								break;
+							}
+							memset(inode_list[i_no].dir_ptr[j]->b_data,'\0',block_size);
+							j++;
+							size = size - block_size;
+						}
+						if(j<5 && size < block_size)
+						{
+							memset(inode_list[i_no].dir_ptr[j]->b_data,'\0',block_size);
+						}
+						if(j>=5 && size)
+						{
+							j = 0;
+							block** sptr;
+							if(inode_list[i_no].single_ptr==NULL)
+							{
+								continue;
+							}
+							sptr = (block**)inode_list[i_no].single_ptr->b_data;
+							while(j< block_size/sizeof(int) && size>=block_size)
+							{
+								if(sptr[j]==NULL)
+								{
+									continue;
+								}
+								memset(sptr[j]->b_data,'\0',block_size);
+								j++;
+								size = size - block_size;
+							}
+							if(j<block_size/sizeof(int) && size<block_size)
+							{
+								memset(sptr[j]->b_data,'\0',size);
+							}
+						}
+						if(j>=block_size/sizeof(int) && size)
+						{
+							j = 0;
+							int k = 0;
+							block** dptr;
+							block** dsptr;
+							if(inode_list[i_no].double_ptr==NULL)
+							{
+								continue;
+							}
+							while(j<block_size/sizeof(int) && size>=block_size)
+							{
+								dptr = (block**)inode_list[i_no].double_ptr->b_data;	
+								if(dptr[j]==NULL)
+								{
+									continue;
+								}
+								dsptr = (block**)dptr[j]->b_data;
+								while(k<block_size/sizeof(int) && size>=block_size)
+								{
+									if(dsptr[k]==NULL)
+									{
+										continue;
+									}
+									memset(dsptr[k]->b_data,'\0',block_size);
+									j++;
+									size = size - block_size;
+								}
 
-
-						(*it)->r.inode_no=-2;
+							}
+							if(j<block_size/sizeof(int) && k< block_size/sizeof(int) && size<block_size)
+							{
+								memset(dsptr[k]->b_data,'\0',size);
+							}
+						}
 					}
 				}
-				
 				dir_list.erase(it);
 				break;
 			}
@@ -699,7 +796,10 @@ int my_rmdir(char* path)
 }
 
 
+int my_close
+{
 
+}
 
 void init()
 {
