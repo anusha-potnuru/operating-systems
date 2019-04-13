@@ -103,6 +103,27 @@ directory* check_valid_directory(char* name)
 	return NULL;
 }
 
+block* find_free_block()
+{
+	block* temp;
+	while(1)
+	{
+		if(sb->freeblockptr->empty()==true)
+		{//empty
+			printf("No free blocks\n");
+			return 0;
+		}
+		else
+		{
+			temp = freeptr.front();
+			freeptr.erase(freeptr.begin());
+			return temp;
+		}
+	}
+	// cout<<"free block returned"<<endl;
+	// return free_ptr;
+}
+
 directory* get_parent(char* path)
 {
 	char *file;
@@ -266,28 +287,6 @@ int my_open(char* path)
 
 
 
-block* find_free_block()
-{
-	block* temp;
-	while(1)
-	{
-		if(sb->freeblockptr->empty()==true)
-		{//empty
-			printf("No free blocks\n");
-			return 0;
-		}
-		else
-		{
-			temp = freeptr.front();
-			freeptr.erase(freeptr.begin());
-			return temp;
-		}
-	}
-	// cout<<"free block returned"<<endl;
-	// return free_ptr;
-}
-
-
 int mkdir(char* path)
 {
 	directory dir;
@@ -327,6 +326,36 @@ int chdir(char* path)
 	}
 	else
 		return 0;
+}
+
+int my_rmdir(char* path)
+{
+	// vector<directory*> iterator it;
+	if(check_valid_directory(path))
+	{
+		for(auto it= dir_list.begin() ; it<dir_list.end() ; it++)
+		{
+			if( strcmp(*it->d_name, path)==0)
+			{
+				// remove all the files in direc
+
+				for(int j=0 ; j< sizeof(block_size)/16 ; j++)
+				{
+					if(*it->r.inode_no!=-2)
+					{ // remove all those blocks and add freeblockptr
+						
+
+						*it->r.inode_no=-2;
+					}
+				}
+				
+
+				dir_list.erase(it);
+				break;
+			}
+		}		
+	}
+	return -1;
 }
 
 
