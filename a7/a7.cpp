@@ -7,7 +7,7 @@
 
 using namespace std;
 #define SIZE 64
-int file_system_size,block_size;
+int file_system_size, block_size;
 int no_of_blocks = file_system_size/block_size;
 char cwd[50] = "root";
 // block* freeblockptr;
@@ -274,6 +274,27 @@ directory* check_valid_directory(char* name)
 	return NULL;
 }
 
+block* find_free_block()
+{
+	block* temp;
+	while(1)
+	{
+		if(sb->freeblockptr->empty()==true)
+		{//empty
+			printf("No free blocks\n");
+			return 0;
+		}
+		else
+		{
+			temp = freeptr.front();
+			freeptr.erase(freeptr.begin());
+			return temp;
+		}
+	}
+	// cout<<"free block returned"<<endl;
+	// return free_ptr;
+}
+
 directory* get_parent(char* path)
 {
 	char *file;
@@ -370,7 +391,6 @@ int my_open(char* path)
 		count++;
 		word = strtok(NULL,"/");
 	}
-
 	// keep file in open dir
 	int flag=0;
 	char* temp;
@@ -435,28 +455,126 @@ int my_open(char* path)
 	return fd-1;	
 }
 
-
-
-block* find_free_block()
+int my_write(int fd, char* buffer, int size)
 {
-	block* temp;
-	while(1)
+	int i_no = -1, di=0, si=0, ddi=0, dsi=0;
+	open_file* temp=open_file_list;
+	while(temp!=NULL)
 	{
-		if(sb->freeblockptr->empty()==true)
-		{//empty
-			printf("No free blocks\n");
-			return 0;
-		}
-		else
+		if(temp->fd ==fd)
 		{
-			temp = freeptr.front();
-			freeptr.erase(freeptr.begin());
-			return temp;
+			i_no = temp->inode_no;
+			break;
+		}
+		temp=temp->next;
+	}
+
+	while(size >= block_size)
+	{
+		if(di==5)
+			break;
+		if(inode_list[i_no].dir_ptr[di++] == NULL)
+		{
+			inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));
+			inode_list[i_no].dir_ptr[di]->b_data = (char*)malloc(sizeof(char)*block_size);
+			strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
+			buffer+=block_size;
+			size-=block_size;
+		}	
+	}
+	if(di==5)
+	{//single ptr
+		block** sptr;
+		while(size>=block_size)
+		{
+			if(inode_list[i_no].single_ptr == NULL)
+			{
+				inode_list[i_no].single_ptr = find_free_block();
+				inode_list[i_no].single_ptr->b_data = (char*)malloc(sizeof(char)*block_size);
+				sptr = (block**)inode_list[i_no].single_ptr->b_data;
+				// for(int k=0 ; k<sizeof(char)*block_size/ sizeof(block*) ; k++)
+				// {
+				// 	sptr[k] = NULL;
+				// }
+			}
+			else
+			{
+				if(si == sizeof(char)*block_size/ sizeof(block*))
+					break;
+				if(sptr[si++] == NULL)
+				{
+					sptr[si] = find_free_block();
+					sptr[si]->b_data = (char*)malloc(sizeof(char)*block_size);
+					strncpy(sptr[si]->b_data, buffer, block_size);
+					buffer+=block_size;
+					size -= block_size;
+				}
+
+			}
+		}		
+	}
+
+	if(si == sizeof(char)*block_size/ sizeof(block*))
+	{
+		block** dptr;
+		block** dsptr;
+		while(size>= block_size)
+		{
+			if(inode_list[i_no].double_ptr==NULL)
+			{
+				inode_list[i_no].double_ptr = find_free_block();
+				inode_list[i_no].double_ptr->b_data = (char*)malloc(sizeof(char)*block_size);
+				dptr = (block**)inode_list[i_no].double_ptr->b_data;		
+				// for(int k=0 ; k<sizeof(char)*block_size/ sizeof(block*) ; k++)
+				// { // for safety
+				// 	inode_list[i_no].double_ptr->b_data[k] = NULL;
+				// }
+			}
+			else
+			{
+				if(ddi == sizeof(char)*block_size/ sizeof(block*))
+				{
+					break;
+				}
+				if(dsi == sizeof(char)*block_size/ sizeof(block*))
+				{
+					dsi=0;
+					ddi++;
+				}
+
+				if(dsi ==0 )
+				{ // create single ptr table
+					dptr[ddi] = find_free_block();
+					dptr[ddi]->b_data = (char*)malloc(sizeof(char)*block_size);
+
+					dsptr = (block**)dptr[ddi]->b_data;
+
+					dsptr[dsi] = find_free_block();
+
+					// copy data
+					dsptr[dsi]->b_data = (char*)malloc(sizeof(char)*block_size);
+					strncpy(dsptr[dsi]->b_data, buffer, block_size);
+					buffer+=block_size;
+					size-=block_size;
+					dsi++;
+				}
+				else
+				{
+					// single ptr exist, only copy data
+					dsptr[dsi]->b_data = (char*)malloc(sizeof(char)*block_size);
+					strncpy(dsptr[dsi]->b_data, buffer, block_size);
+					buffer+=block_size;
+					size-=block_size;
+					dsi++;
+				}
+
+			}
 		}
 	}
-	// cout<<"free block returned"<<endl;
-	// return free_ptr;
+
+	return 1;
 }
+
 
 
 int mkdir(char* path)
@@ -498,6 +616,37 @@ int chdir(char* path)
 	}
 	else
 		return 0;
+}
+
+int my_rmdir(char* path)
+{
+	// vector<directory*> iterator it;
+	if(check_valid_directory(path))
+	{
+		for(auto it= dir_list.begin() ; it<dir_list.end() ; it++)
+		{
+			if( strcmp( (*it)->d_name, path)==0)
+			{
+				// remove all the files in direc
+
+				for(int j=0 ; j< sizeof(block_size)/16 ; j++)
+				{
+
+					// if( (*it)->r.inode_no!=-2)
+					// { // remove all those blocks and add freeblockptr
+
+
+					// 	(*it)->r.inode_no=-2;
+					// }
+				}
+				
+
+				dir_list.erase(it);
+				break;
+			}
+		}		
+	}
+	return -1;
 }
 
 
