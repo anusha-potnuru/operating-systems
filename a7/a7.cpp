@@ -4,7 +4,7 @@
 
 using namespace std;
 #define SIZE 64
-int file_system_size,block_size;
+int file_system_size, block_size;
 int no_of_blocks = file_system_size/block_size;
 char cwd[50] = "root";
 // block* freeblockptr;
@@ -220,7 +220,6 @@ int my_open(char* path)
 		count++;
 		word = strtok(NULL,"/");
 	}
-
 	// keep file in open dir
 	int flag=0;
 	char* temp;
@@ -285,6 +284,118 @@ int my_open(char* path)
 	return fd-1;	
 }
 
+int my_write(int fd, char* buffer, int size)
+{
+	int i_no = -1, di=0, si=0, ddi=0, dsi=0;
+	open_file* temp=open_file_list;
+	while(temp!=NULL)
+	{
+		if(temp->fd ==fd)
+		{
+			i_no = temp->inode_no;
+			break;
+		}
+		temp=temp->next;
+	}
+
+	while(size >= block_size)
+	{
+		if(di==5)
+			break;
+		if(dir_ptr[di++] == NULL)
+		{
+			dir_ptr[di] = (block*)malloc(sizeof(block));
+			dir_ptr[di]->b_data = (char*)malloc(sizeof(char)*block_size);
+			strncpy(dir_ptr[di]->b_data, buffer, block_size);
+			buffer+=block_size;
+			size-=block_size;
+		}	
+	}
+	if(di==5)
+	{//single ptr
+		while(size>=block_size)
+		{
+			if(single_ptr == NULL)
+			{
+				single_ptr = find_free_block();
+				single_ptr->b_data = (block*)malloc(sizeof(char)*block_size);
+				for(int k=0 ; k<sizeof(char)*block_size/ sizeof(block*) ; k++)
+				{
+					single_ptr->b_data[k] = NULL;
+				}
+			}
+			else
+			{
+				if(si == sizeof(char)*block_size/ sizeof(block*))
+					break;
+				if(single_ptr->b_data[si++] == NULL)
+				{
+					single_ptr->b_data[si] = find_free_block();
+					single_ptr->b_data[si]->b_data = (char*)malloc(sizeof(char)*block_size);
+					strncpy(single_ptr->b_data[si]->b_data, buffer, block_size);
+					buffer+=block_size;
+					size -= block_size;
+				}
+
+			}
+		}		
+	}
+
+	if(si == sizeof(char)*block_size/ sizeof(block*))
+	{
+		while(size>= block_size)
+		{
+			if(double_ptr==NULL)
+			{
+				double_ptr = find_free_block();
+				double_ptr->b_data = (block*)malloc(sizeof(char)*block_size);
+				for(int k=0 ; k<sizeof(char)*block_size/ sizeof(block*) ; k++)
+				{ // for safety
+					double_ptr->b_data[k] = NULL;
+				}
+			}
+			else
+			{
+				if(ddi == sizeof(char)*block_size/ sizeof(block*))
+				{
+					break;
+				}
+				if(dsi == sizeof(char)*block_size/ sizeof(block*))
+				{
+					dsi=0;
+					ddi++;
+				}
+
+				if(dsi ==0 )
+				{ // create single ptr table
+					double_ptr->b_data[ddi] = find_free_block();
+					double_ptr->b_data[ddi]->b_data = (block*)malloc(sizeof(char)*block_size);
+					double_ptr->b_data[ddi]->b_data[dsi] = find_free_block();
+
+					// copy data
+					double_ptr->b_data[ddi]->b_data[dsi]->b_data = (char*)malloc(sizeof(char)*block_size);
+					strncpy(double_ptr->b_data[ddi]->b_data[dsi]->b_data, buffer, block_size);
+					buffer+=block_size;
+					size-=block_size;
+					dsi++;
+				}
+				else
+				{
+					// single ptr exist, only copy data
+					double_ptr->b_data[ddi]->b_data[dsi]->b_data = (char*)malloc(sizeof(char)*block_size);
+					strncpy(double_ptr->b_data[ddi]->b_data[dsi]->b_data, buffer, block_size);
+					buffer+=block_size;
+					size-=block_size;
+					dsi++;
+				}
+
+			}
+		}
+	}
+
+	return 1;
+}
+
 
 
 int mkdir(char* path)
@@ -343,7 +454,7 @@ int my_rmdir(char* path)
 				{
 					if(*it->r.inode_no!=-2)
 					{ // remove all those blocks and add freeblockptr
-						
+
 
 						*it->r.inode_no=-2;
 					}
