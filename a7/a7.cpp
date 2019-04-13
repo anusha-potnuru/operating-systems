@@ -620,10 +620,10 @@ int chdir(char* path)
 
 int my_rmdir(char* path)
 {
-	// vector<directory*> iterator it;
+	vector<directory*>::iterator it;
 	if(check_valid_directory(path))
 	{
-		for(auto it= dir_list.begin() ; it<dir_list.end() ; it++)
+		for(it= dir_list.begin() ; it!=dir_list.end() ; it++)
 		{
 			if( strcmp( (*it)->d_name, path)==0)
 			{
@@ -653,7 +653,7 @@ int my_rmdir(char* path)
 						int flag=0;
 						while(temp!=NULL)
 						{
-							if(temp->i_node == i_no)
+							if(temp->inode_no == i_no)
 							{
 								prev->next = temp->next;
 								free(temp);
@@ -735,6 +735,7 @@ int my_rmdir(char* path)
 								memset(dsptr[k]->b_data,'\0',size);
 							}
 						}
+						inode_list[i_no].file_size = -2;
 					}
 				}
 
@@ -746,11 +747,33 @@ int my_rmdir(char* path)
 	return -1;
 }
 
-
-int my_close
+int my_close(int fd)
 {
-
+	open_file *temp,*prev;
+	temp = open_file_list;
+	prev = open_file_list;
+	int flag=0;
+	int i_no;
+	while(temp!=NULL)
+	{
+		if(temp->fd == fd)
+		{
+			i_no = temp->inode_no;
+			prev->next = temp->next;
+			free(temp);
+			flag = 1;
+			break;
+		}
+		prev = temp;
+		temp = temp->next;
+	}
+	if(flag==-1)
+	{
+		return -1;
+	}
+	return 1;
 }
+
 
 void init()
 {
