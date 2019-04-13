@@ -469,23 +469,35 @@ int my_write(int fd, char* buffer, int size)
 		temp=temp->next;
 	}
 
-	while(size >= block_size)
+	while(size > 0)
 	{
 		if(di==5)
 			break;
 		if(inode_list[i_no].dir_ptr[di++] == NULL)
 		{
-			inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));
+			inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));			
 			inode_list[i_no].dir_ptr[di]->b_data = (char*)malloc(sizeof(char)*block_size);
-			strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
-			buffer+=block_size;
-			size-=block_size;
+
+			if(size >= block_size)
+			{
+				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
+				buffer+=block_size;
+				size-=block_size;
+				inode_list[i_no].file_size+=block_size;
+			}
+			else if( size>0 && size<block_size )
+			{
+				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, size);
+				inode_list[i_no].file_size+=size;
+				size=0;
+				return 1;
+			}
 		}	
 	}
 	if(di==5)
 	{//single ptr
 		block** sptr;
-		while(size>=block_size)
+		while(size>0)
 		{
 			if(inode_list[i_no].single_ptr == NULL)
 			{
@@ -505,9 +517,22 @@ int my_write(int fd, char* buffer, int size)
 				{
 					sptr[si] = find_free_block();
 					sptr[si]->b_data = (char*)malloc(sizeof(char)*block_size);
-					strncpy(sptr[si]->b_data, buffer, block_size);
-					buffer+=block_size;
-					size -= block_size;
+
+					if(size >= block_size)
+					{
+						strncpy(sptr[si]->b_data, buffer, block_size);
+						buffer+=block_size;
+						size -= block_size;
+						inode_list[i_no].file_size+=block_size;
+					}
+					else if(size>0 && size<block_size)
+					{
+						strncpy(sptr[si]->b_data, buffer, size);
+						buffer+=size;
+						size -= size;
+						inode_list[i_no].file_size+=size;
+						return 1;
+					}
 				}
 
 			}
@@ -553,18 +578,44 @@ int my_write(int fd, char* buffer, int size)
 
 					// copy data
 					dsptr[dsi]->b_data = (char*)malloc(sizeof(char)*block_size);
-					strncpy(dsptr[dsi]->b_data, buffer, block_size);
-					buffer+=block_size;
-					size-=block_size;
+
+					if(size>=block_size)
+					{
+						strncpy(dsptr[dsi]->b_data, buffer, block_size);
+						buffer+=block_size;
+						size-=block_size;
+						inode_list[i_no].file_size+=block_size;
+					}
+					else if(size>0 && size<block_size)
+					{
+						strncpy(dsptr[dsi]->b_data, buffer, size);
+						buffer+=size;
+						size-=size;
+						inode_list[i_no].file_size+=size;
+						return 1;
+					}
 					dsi++;
 				}
 				else
 				{
 					// single ptr exist, only copy data
 					dsptr[dsi]->b_data = (char*)malloc(sizeof(char)*block_size);
-					strncpy(dsptr[dsi]->b_data, buffer, block_size);
-					buffer+=block_size;
-					size-=block_size;
+					if(size >= block_size)
+					{
+						strncpy(dsptr[dsi]->b_data, buffer, block_size);
+						buffer+=block_size;
+						size-=block_size;
+						inode_list[i_no].file_size+=block_size;
+					}
+					else if(size>0 && size<block_size)
+					{
+						strncpy(dsptr[dsi]->b_data, buffer, size);
+						buffer+=size;
+						size-=size;
+						inode_list[i_no].file_size+=size;
+						return 1;
+					}
+					
 					dsi++;
 				}
 
@@ -572,7 +623,7 @@ int my_write(int fd, char* buffer, int size)
 		}
 	}
 
-	return 1;
+	return -1;
 }
 
 
@@ -620,10 +671,10 @@ int chdir(char* path)
 
 int my_rmdir(char* path)
 {
-	// vector<directory*> iterator it;
+	vector<directory*>::iterator it;
 	if(check_valid_directory(path))
 	{
-		for(auto it= dir_list.begin() ; it<dir_list.end() ; it++)
+		for(it= dir_list.begin() ; it!=dir_list.end() ; it++)
 		{
 			if( strcmp( (*it)->d_name, path)==0)
 			{
@@ -631,16 +682,14 @@ int my_rmdir(char* path)
 
 				for(int j=0 ; j< sizeof(block_size)/16 ; j++)
 				{
+					if( (*it)->r.inode_no!=-2)
+					{ // remove all those blocks and add freeblockptr
 
-					// if( (*it)->r.inode_no!=-2)
-					// { // remove all those blocks and add freeblockptr
 
-
-					// 	(*it)->r.inode_no=-2;
-					// }
+						(*it)->r.inode_no=-2;
+					}
 				}
 				
-
 				dir_list.erase(it);
 				break;
 			}
