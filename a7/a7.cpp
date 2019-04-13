@@ -647,13 +647,26 @@ int my_rmdir(char* path)
 					{
 						int i_no = (*it)->r[j].inode_no;
 						int size =  inode_list[(*it)->r[j].inode_no].file_size;
-
-
+						open_file *temp,*prev;
+						temp = open_file_list;
+						prev = open_file_list;
+						int flag=0;
+						while(temp!=NULL)
+						{
+							if(temp->i_node == i_no)
+							{
+								prev->next = temp->next;
+								free(temp);
+								temp = prev;
+							}
+							prev = temp;
+							temp = temp->next;
+						}
 						while(j < 5 && size>=block_size)
 						{
 							if(inode_list[i_no].dir_ptr[j]==NULL)
 							{
-								return ret;
+								break;
 							}
 							memset(inode_list[i_no].dir_ptr[j]->b_data,'\0',block_size);
 							j++;
@@ -722,21 +735,6 @@ int my_rmdir(char* path)
 								memset(dsptr[k]->b_data,'\0',size);
 							}
 						}
-						open_file *temp,*prev;
-						temp = open_file_list;
-						prev = open_file_list;
-						int flag=0;
-						while(temp!=NULL)
-						{
-							if(temp->i_node == i_no)
-							{
-								prev->next = temp->next;
-								free(temp);
-								temp = prev;
-							}
-							prev = temp;
-							temp = temp->next;
-						}
 					}
 				}
 
@@ -749,7 +747,10 @@ int my_rmdir(char* path)
 }
 
 
+int my_close
+{
 
+}
 
 void init()
 {
