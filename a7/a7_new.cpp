@@ -378,6 +378,7 @@ directory* get_parent( char* path)
 	char *parent = (char*)malloc(sizeof(char)*100);
 	// strcpy(parent, cwd);
 	int count=0;
+
 	while(word!=NULL)
 	{
 		if(count==0)
@@ -388,13 +389,12 @@ directory* get_parent( char* path)
 		{
 			// strcat(current,"/");
 			strcat(current,file);
-			cout<<"current "<<current<<endl;
 			if(!check_valid_directory(current))
 			{
-				printf("1 invalid path\n");
+				printf("invalid path\n");
 				return NULL;
 			}
-			strcat(file,word);
+			file = word;
 		}
 		else 
 		{
@@ -403,10 +403,10 @@ directory* get_parent( char* path)
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
-				printf("2 invalid path\n");
+				printf("invalid path\n");
 				return NULL;
 			}
-			strcat(file,word);
+			file = word;
 		}
 		count++;
 		word = strtok(NULL,"/");
@@ -769,7 +769,6 @@ int my_mkdir( char* path)
 
 	char* fpath;
 	fpath = strdup(cwd);
-	// strcpy(dir.d_name,  strcat(fpath, path));
 	strcat(fpath, "/");
 	strcat(fpath, path);
 	cout<<fpath<<endl;
@@ -811,7 +810,6 @@ int my_mkdir( char* path)
 
 int my_chdir( char* path)
 {//full path
-	cout<<"path "<<path<<endl;
 	if(check_valid_directory(path))
 	{
 		strcpy(cwd, path);
@@ -1016,37 +1014,18 @@ int main()
 	char *buffer;
 	buffer = (char*)malloc(sizeof(char)*600);
 	cout<<"enter buffer"<<endl;
-	// scanf("%s",buffer);
-	// readinput(buffer, 150);
-	// // scanf("%[^\n]%*c",buffer);
-	// strcpy(buffer,"nice tutorial nice tutorial 28 nice tutorial nice tutorial 56 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial 28 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial");
-	strcpy(buffer,"The data blocks of a file are maintained using index nodes or i-nodes. Each i-node will contain information about the data blocks, and will include 5 direct pointers, 1 singly indirect pointer, and 1 doubly indirect pointer. Each pointer will be 32 bits in size, and will indicate a block number. It will also store a type field indicating whether the file is a regular file or a directory, and file size in bytes. The i-nodes will be stored in Block-1 and Block-2, in increasing order of their numbers (i.e. i-node-0 first, followed by i-node-1, and so on).");
-	init();
-	cout<<"buffer length: "<<strlen(buffer)<<endl;
-	int success = my_mkdir("myfolder");
-	my_chdir("root/myfolder");
-	int fd = my_open("abc.txt");
-	cout<<"fd of file is "<<fd<<endl;
-	
-	int size = my_write(fd,buffer,strlen(buffer));
-	memset(buffer,'\0',size);
-	size = my_read(fd,buffer,590);
-	cout<<"buffer read\n";
-	cout<<buffer<<endl;
-	cout<<size<<endl;
-	my_cat(fd);
-	my_copy(fd,"abc.txt");
-	
-	cout<<success<<endl;
-	// size = my_read(fd,buffer,60);
-	// my_mkdir("anusha");
-	// my_chdir("root/anusha");
-	// int fd1 = my_open("abc.txt");
-	// cout<<"fd of file is "<<fd1<<endl;
-	// strcpy(buffer, "hello world");
 
-	// int size1 = my_write(fd1, buffer,strlen(buffer));
-	// my_cat(fd1);
+	my_mkdir("anusha");
+	my_chdir("root/anusha");
+
+	cout<<cwd<<"\n";
+	int fd1 = my_open("abc.txt");
+	cout<<"fd of file is "<<fd1<<endl;
+	strcpy(buffer, "hello world");
+
+	int size1 = my_write(fd1, buffer,strlen(buffer));
+	my_cat(fd1);
+
 	// cout<<"reading 60 bytes\n"<<buffer<<endl;
 	// cout<<strlen(buffer)<<endl;
 	// size = my_copy(fd);
