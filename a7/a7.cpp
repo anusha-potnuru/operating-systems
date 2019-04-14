@@ -81,7 +81,7 @@ int find_free_inode()
 	{
 		if(inode_list[i].file_size==-2)
 		{
-			cout<<"inode in free list"<<i<<endl;
+			// cout<<"inode in free list"<<i<<endl;
 			for(int j=0; j<5; j++)
 				inode_list[i].dir_ptr[j] = NULL;
 			inode_list[i].single_ptr = NULL;
@@ -94,7 +94,7 @@ int find_free_inode()
 
 block* find_free_block()
 {
-	cout<<"in find free blocks"<<endl;
+	// cout<<"in find free blocks"<<endl;
 	block* temp;
 	while(1)
 	{
@@ -105,7 +105,7 @@ block* find_free_block()
 		}
 		else
 		{
-			cout<<"here\n";
+			// cout<<"here\n";
 			temp = freeptr.front();
 			freeptr.erase(freeptr.begin());
 			// cout<<temp->id;
@@ -209,6 +209,7 @@ int my_read(int fd, char *buf, int size)
 	}
 	if(j>=5 && size)
 	{
+		cout<<"++++ enter single_ptr"<<endl;
 		j = 0;
 		block** sptr;
 		if(inode_list[i_no].single_ptr==NULL)
@@ -216,24 +217,29 @@ int my_read(int fd, char *buf, int size)
 			return ret;
 		}
 		sptr = (block**)inode_list[i_no].single_ptr->b_data;
-		while(j< block_size/sizeof(int) && size>=block_size)
+		if(sptr == NULL)
+		{
+			printf("single ptr null\n");
+		}
+		while(j< block_size/sizeof(block*) && size>=block_size)
 		{
 			if(sptr[j]==NULL)
 			{
 				return ret;
 			}
+			cout<<"+++my read"<<sptr[j]->b_data<<endl;
 			strncat(buf,sptr[j]->b_data,block_size);
 			j++;
 			size = size - block_size;
 			ret += block_size;
 		}
-		if(j<block_size/sizeof(int) && size<block_size)
+		if(j<block_size/sizeof(block*) && size<block_size)
 		{
 			strncat(buf,sptr[j]->b_data,size);
 			ret += size;
 		}
 	}
-	if(j>=block_size/sizeof(int) && size)
+	if(j>=block_size/sizeof(block*) && size)
 	{
 		j = 0;
 		int k = 0;
@@ -243,7 +249,7 @@ int my_read(int fd, char *buf, int size)
 		{
 			return ret;
 		}
-		while(j<block_size/sizeof(int) && size>=block_size)
+		while(j<block_size/sizeof(block*) && size>=block_size)
 		{
 			dptr = (block**)inode_list[i_no].double_ptr->b_data;	
 			if(dptr[j]==NULL)
@@ -251,7 +257,7 @@ int my_read(int fd, char *buf, int size)
 				return ret;
 			}
 			dsptr = (block**)dptr[j]->b_data;
-			while(k<block_size/sizeof(int) && size>=block_size)
+			while(k<block_size/sizeof(block*) && size>=block_size)
 			{
 				if(dsptr[k]==NULL)
 				{
@@ -264,7 +270,7 @@ int my_read(int fd, char *buf, int size)
 			}
 
 		}
-		if(j<block_size/sizeof(int) && k< block_size/sizeof(int) && size<block_size)
+		if(j<block_size/sizeof(block*) && k< block_size/sizeof(block*) && size<block_size)
 		{
 			strncat(buf,dsptr[k]->b_data,size);
 			ret += size;
@@ -355,11 +361,11 @@ directory* check_valid_directory( char* name)
 
 directory* get_parent( char* path)
 {
-	char *file;
+	char *file = (char*)malloc(sizeof(char)*100);
 	char *word = strtok(path, "/");
-	char *current;
+	char *current = (char*)malloc(sizeof(char)*100);
 	strcpy(current, cwd);
-	char *parent;
+	char *parent = (char*)malloc(sizeof(char)*100);
 	strcpy(parent, cwd);
 	int count=0;
 
@@ -429,8 +435,11 @@ int my_open(char* path)
 	else
 	{
 		word = NULL;
+		strcpy(file,path);
 	}
-	strcpy(file,path);
+	
+
+	cout<<"in open,,file: "<<file<<endl;
 	char *current = (char*)malloc(sizeof(char)*200);
 	strcpy(current, cwd);
 	char *parent= (char*)malloc(sizeof(char)*200);
@@ -473,12 +482,18 @@ int my_open(char* path)
 	// keep file in open dir
 	int flag=0;
 	char* temp;
+	cout<<"cwd "<<cwd;
 	temp = strdup(cwd);
 	open_file* tempnode, *prev;
 	
 	open_file* node = new open_file;
 	// node->inode_no = i_no;
-	strcpy(node->path , strcat(temp,path)); //temp has full path now
+
+	strcat(temp, "/");
+	strcat(temp, path);
+
+	strcpy(node->path ,temp ); //temp has full path now
+	cout<<"+++ "<<node->path<<endl;
 	node->fd = fd++;
 	node->next = NULL;
 	if(open_file_list==NULL)
@@ -556,15 +571,15 @@ int my_write(int fd, char* buffer, int size)
 		if(inode_list[i_no].dir_ptr[di] == NULL)
 		{
 			// inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));
-			cout<<"here\n";
+			// cout<<"here\n";
 			inode_list[i_no].dir_ptr[di] = find_free_block();			
 			inode_list[i_no].dir_ptr[di]->b_data = (char*)malloc(sizeof(char)*block_size);
-			cout<<"here\n";
+			// cout<<"here\n";
 			if(size >= block_size)
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
 				// cout<<"length stored "<<strlen(inode_list[i_no].dir_ptr[di]->b_data)<<endl;
-				// cout<<"in write direct pointer "<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
+				cout<<"in write direct pointer "<<endl<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				buffer+=block_size;
 				size-=block_size;
 				inode_list[i_no].file_size+=block_size;
@@ -572,7 +587,7 @@ int my_write(int fd, char* buffer, int size)
 			else if( size>0 && size<block_size )
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, size);
-				// cout<<"in write direct pointer ending"<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
+				cout<<"in write direct pointer ending\n"<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				inode_list[i_no].file_size += size;
 				size=0;
 				return 1;
@@ -590,6 +605,7 @@ int my_write(int fd, char* buffer, int size)
 			{
 				inode_list[i_no].single_ptr = find_free_block();
 				inode_list[i_no].single_ptr->b_data = (char*)malloc(sizeof(char)*block_size);
+				memset(inode_list[i_no].single_ptr->b_data, 0, block_size);
 				sptr = (block**)inode_list[i_no].single_ptr->b_data;
 				// for(int k=0 ; k<sizeof(char)*block_size/ sizeof(block*) ; k++)
 				// {
@@ -604,11 +620,12 @@ int my_write(int fd, char* buffer, int size)
 				{
 					sptr[si] = find_free_block();
 					sptr[si]->b_data = (char*)malloc(sizeof(char)*block_size);
+					memset(sptr[si]->b_data, 0, block_size);
 
 					if(size >= block_size)
 					{
 						strncpy(sptr[si]->b_data, buffer, block_size);
-						// cout<<"in write single pointer "<<sptr[si]->b_data<<endl;
+						cout<<"in write single pointer \n"<<sptr[si]->b_data<<endl;
 						buffer+=block_size;
 						size -= block_size;
 						inode_list[i_no].file_size+=block_size;
@@ -616,7 +633,7 @@ int my_write(int fd, char* buffer, int size)
 					else if(size>0 && size<block_size)
 					{
 						strncpy(sptr[si]->b_data, buffer, size);
-						cout<<"in write single pointer ending"<<sptr[si]->b_data<<endl;
+						cout<<"in write single pointer ending\n"<<sptr[si]->b_data<<endl;
 						buffer+=size;
 						inode_list[i_no].file_size+=size;						
 						return 1;
@@ -638,6 +655,7 @@ int my_write(int fd, char* buffer, int size)
 			{
 				inode_list[i_no].double_ptr = find_free_block();
 				inode_list[i_no].double_ptr->b_data = (char*)malloc(sizeof(char)*block_size);
+				memset(inode_list[i_no].double_ptr->b_data, 0, block_size);
 				dptr = (block**)inode_list[i_no].double_ptr->b_data;		
 				// for(int k=0 ; k<sizeof(char)*block_size/ sizeof(block*) ; k++)
 				// { // for safety
@@ -679,7 +697,7 @@ int my_write(int fd, char* buffer, int size)
 					else if(size>0 && size<block_size)
 					{
 						strncpy(dsptr[dsi]->b_data, buffer, size);
-						cout<<"in write double pointer ending"<<dsptr[dsi]->b_data<<endl;
+						cout<<"in write double pointer ending\n"<<dsptr[dsi]->b_data<<endl;
 						buffer+=size;
 						inode_list[i_no].file_size+=size;						
 						return 1;
@@ -693,7 +711,7 @@ int my_write(int fd, char* buffer, int size)
 					if(size >= block_size)
 					{
 						strncpy(dsptr[dsi]->b_data, buffer, block_size);
-						// cout<<"in write double pointer "<<dsptr[dsi]->b_data<<endl;
+						cout<<"in write double pointer \n"<<dsptr[dsi]->b_data<<endl;
 						buffer+=block_size;
 						size-=block_size;
 						inode_list[i_no].file_size+=block_size;
@@ -701,7 +719,7 @@ int my_write(int fd, char* buffer, int size)
 					else if(size>0 && size<block_size)
 					{
 						strncpy(dsptr[dsi]->b_data, buffer, size);
-						cout<<"in write double pointer ending "<<dsptr[dsi]->b_data<<endl;
+						cout<<"in write double pointer ending \n"<<dsptr[dsi]->b_data<<endl;
 						buffer+=size;
 						inode_list[i_no].file_size+=size;
 						return 1;
@@ -722,12 +740,17 @@ int my_write(int fd, char* buffer, int size)
 int my_mkdir( char* path)
 {
 	directory dir;
+	dir.d_name = (char*)malloc(sizeof(char)*100);
 	char* fpath;
 	fpath = strdup(cwd);
-	strcpy(dir.d_name,  strcat(fpath, path));
+	strcat(fpath, "/");
+	strcat(fpath, path);
 
+	strcpy(dir.d_name,  fpath);
+
+	cout<<"+++dirname "<<dir.d_name<<endl;
 	dir.dot = &dir;
-	dir.ddot = get_parent(path);
+	dir.ddot = get_parent(fpath);
 
 	if(dir.ddot==NULL)
 		return -1;
@@ -744,6 +767,7 @@ int my_mkdir( char* path)
 	{
 		temp[k].inode_no = -1;
 	}
+
 	dir_list.push_back(&dir);
 	return 1;
 
@@ -754,6 +778,7 @@ int my_chdir( char* path)
 	if(check_valid_directory(path))
 	{
 		strcpy(cwd, path);
+		cout<<"changed dir to "<<cwd<<"\n";
 		return 1;
 	}
 	else
@@ -944,6 +969,7 @@ int main()
 	// cin>>file_system_size>>block_size;
 	file_system_size = INT_MAX;
 	block_size = 64;
+	init();
 
 	// how to typecast inode list to two blocks
 
@@ -954,22 +980,34 @@ int main()
 	// scanf("%s",buffer);
 	// readinput(buffer, 150);
 	// // scanf("%[^\n]%*c",buffer);
-	strcpy(buffer, "The data blocks of a file are maintained using index nodes or i-nodes. Each i-node will contain information about the data blocks, and will include 5 direct pointers, 1 singly indirect pointer, and 1 doubly indirect pointer. Each pointer will be 32 bits in size, and will indicate a block number. It will also store a type field indicating whether the file is a regular file or a directory, and file size in bytes. The i-nodes will be stored in Block-1 and Block-2, in increasing order of their numbers (i.e. i-node-0 first, followed by i-node-1, and so on).");
-	// cout<<"entered buffer is = "<<buffer<<endl;
-	init();
-	cout<<"buffer length: "<<strlen(buffer)<<endl;
-	int fd = my_open("abc.txt");
-	cout<<"fd of file is "<<fd<<endl;
-	int size = my_write(fd,buffer,strlen(buffer));
-	cout<<size<<endl;
-	memset(buffer,'\0',size);
-	size = my_read(fd,buffer, size);
+	// strcpy(buffer, "The data blocks of a file are maintained using index nodes or i-nodes. Each i-node will contain information about the data blocks, and will include 5 direct pointers, 1 singly indirect pointer, and 1 doubly indirect pointer. Each pointer will be 32 bits in size, and will indicate a block number. It will also store a type field indicating whether the file is a regular file or a directory, and file size in bytes. The i-nodes will be stored in Block-1 and Block-2, in increasing order of their numbers (i.e. i-node-0 first, followed by i-node-1, and so on).");
+	// // cout<<"entered buffer is = "<<buffer<<endl;
+	
+	// cout<<"buffer length: "<<strlen(buffer)<<endl;
+	// int fd = my_open("abc.txt");
+	// cout<<"fd of file is "<<fd<<endl;
+	// int size = my_write(fd,buffer,strlen(buffer));
+	// cout<<"\n\nwrite done"<<endl;
+	// cout<<size<<endl;
 
-	cout<<buffer<<endl;
+	// memset(buffer,'\0',sizeof(buffer));
+
+	// size = my_read(fd,buffer, 558);
+
+	// cout<<buffer<<endl;
 	// cout<<size<<endl;
 	// my_cat(fd);
 	// my_copy(fd,"abc.txt");
-	// size = my_read(fd,buffer,60);
+
+	my_mkdir("anusha");
+	my_chdir("root/anusha");
+	int fd1 = my_open("abc.txt");
+	cout<<"fd of file is "<<fd1<<endl;
+	strcpy(buffer, "hello world");
+
+	int size1 = my_write(fd1, buffer,strlen(buffer));
+	my_cat(fd1);
+
 	// cout<<"reading 60 bytes\n"<<buffer<<endl;
 	// cout<<strlen(buffer)<<endl;
 	// size = my_copy(fd);
