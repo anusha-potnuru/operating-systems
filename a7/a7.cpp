@@ -6,8 +6,10 @@
 
 using namespace std;
 #define SIZE 64
+
 int file_system_size = 2048, block_size = 64;
 int no_of_blocks = (int)file_system_size/block_size;
+
 char cwd[50] = "root";
 // block* freeblockptr;
 int fd=0;
@@ -23,17 +25,6 @@ typedef struct
 	vector<block*> *freeblockptr;
 	// block *first_block;
 }superblock;
-
-typedef struct 
-{
-	// block* data[block_size/sizeof(int)];
-	int sptr[SIZE/sizeof(int)];
-}singletable;
-
-typedef struct 
-{
-	singletable dptr[SIZE/sizeof(int)];
-}doubletable;
 
 
 typedef struct 
@@ -921,8 +912,6 @@ int my_close(int fd)
 }
 
 
-
-
 void readinput(char* buffer, int len)
 {
 	char c;
@@ -948,6 +937,11 @@ void readinput(char* buffer, int len)
 
 int main()
 {
+	cout<<"enter filesize and block_size"<<endl;
+	cin>>file_system_size>>block_size;
+
+	// how to typecast inode list to two blocks
+
 	cout<<"in main"<<endl;
 	char *buffer;
 	buffer = (char*)malloc(sizeof(char)*600);
