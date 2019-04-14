@@ -141,7 +141,7 @@ void init()
 	strcpy(root_direc.d_name, "root");
 	root_direc.dot = &root_direc;
 	root_direc.ddot = NULL;
-	// i = find_free_inode();
+	i = find_free_inode();
 	inode_list[i].type = 1;
 	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
 	inode_list[i].file_size=-1; 
@@ -357,9 +357,13 @@ directory* check_valid_directory( char* name)
 {
 	for(int i=0; i<dir_list.size();i++)
 	{
-		if(strcmp(dir_list[i]->d_name, name) ==0)
+		if(dir_list[i]->d_name!=NULL)
 		{
-			return dir_list[i];		
+			if(strcmp(dir_list[i]->d_name, name) ==0)
+			{
+				cout<<"dir list"<<dir_list[i]->d_name<<endl;
+				return dir_list[i];		
+			}
 		}
 	}
 	return NULL;
@@ -371,10 +375,11 @@ directory* get_parent( char* path)
 	char *file = (char*)malloc(sizeof(char)*100);
 	char *word = strtok(path, "/");
 	char *current = (char*)malloc(sizeof(char)*100);
-	strcpy(current, cwd);
+	// strcpy(current, cwd);
 	char *parent= (char*)malloc(sizeof(char)*100);
-	strcpy(parent, cwd);
+	// strcpy(parent, cwd);
 	int count = 0;
+	cout<<"path === "<<path<<endl;
 	while(word!=NULL)
 	{
 		if(count==0)
@@ -383,14 +388,15 @@ directory* get_parent( char* path)
 		}
 		else if(count==1)
 		{
-			strcat(current,"/");
+			// strcat(current,"/");
 			strcat(current,file);
+			cout<<"current "<<current<<endl;
 			if(!check_valid_directory(current))
 			{
-				printf("invalid path\n");
+				printf("1 invalid path\n");
 				return NULL;
 			}
-			file = word;
+			strcat(file,word);
 		}
 		else 
 		{
@@ -399,15 +405,17 @@ directory* get_parent( char* path)
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
-				printf("invalid path\n");
+				printf("2 invalid path\n");
 				return NULL;
 			}
-			file = word;
+			strcat(file,word);
 		}
 		count++;
 		word = strtok(NULL,"/");
 	}
-
+	// cout<<"parent   "<<parent<<endl;
+	// cout<<"current  "<<current<<endl;
+	// cout<<"file    "<<file<<endl;
 	for(int j=0; j<dir_list.size(); j++)
 	{
 		if( strcmp(dir_list[j]->d_name , current)==0)
@@ -424,7 +432,7 @@ int my_open(char* path)
 	char *file = (char*)malloc(sizeof(char)*50);
 	// char *path = (char*)path1;
 	int i;
-	int fl = 1;
+	int fl = 0;
 	cout<<"here "<<strlen(path)<<endl;
 	for(i=0;i<strlen(path)-1;i++)
 	{
@@ -760,7 +768,7 @@ int my_mkdir( char* path)
 	dir.d_name = (char*)malloc(sizeof(char)*100);
 	char* fpath;
 	fpath = strdup(cwd);
-	strcpy(dir.d_name,  strcat(fpath, path));
+	// strcpy(dir.d_name,  strcat(fpath, path));
 	strcat(fpath, "/");
 	strcat(fpath, path);
 
@@ -794,6 +802,7 @@ int my_mkdir( char* path)
 
 int my_chdir( char* path)
 {//full path
+	cout<<"path "<<path<<endl;
 	if(check_valid_directory(path))
 	{
 		strcpy(cwd, path);
@@ -1006,9 +1015,10 @@ int main()
 	init();
 	cout<<"buffer length: "<<strlen(buffer)<<endl;
 	int success = my_mkdir("myfolder");
-	int fd = my_open("myfolder/abc.txt");
-	cout<<"fd of file is "<<fd<<endl;
 	my_chdir("root/myfolder");
+	int fd = my_open("abc.txt");
+	cout<<"fd of file is "<<fd<<endl;
+	
 	int size = my_write(fd,buffer,strlen(buffer));
 	memset(buffer,'\0',size);
 	size = my_read(fd,buffer,590);
