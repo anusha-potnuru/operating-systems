@@ -563,8 +563,8 @@ int my_write(int fd, char* buffer, int size)
 			if(size >= block_size)
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
-				cout<<"length stored "<<strlen(inode_list[i_no].dir_ptr[di]->b_data)<<endl;
-				cout<<"in write direct pointer "<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
+				// cout<<"length stored "<<strlen(inode_list[i_no].dir_ptr[di]->b_data)<<endl;
+				// cout<<"in write direct pointer "<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				buffer+=block_size;
 				size-=block_size;
 				inode_list[i_no].file_size+=block_size;
@@ -572,7 +572,7 @@ int my_write(int fd, char* buffer, int size)
 			else if( size>0 && size<block_size )
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, size);
-				cout<<"in write direct pointer ending"<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
+				// cout<<"in write direct pointer ending"<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				inode_list[i_no].file_size += size;
 				size=0;
 				return 1;
@@ -608,7 +608,7 @@ int my_write(int fd, char* buffer, int size)
 					if(size >= block_size)
 					{
 						strncpy(sptr[si]->b_data, buffer, block_size);
-						cout<<"in write single pointer "<<sptr[si]->b_data<<endl;
+						// cout<<"in write single pointer "<<sptr[si]->b_data<<endl;
 						buffer+=block_size;
 						size -= block_size;
 						inode_list[i_no].file_size+=block_size;
@@ -618,9 +618,7 @@ int my_write(int fd, char* buffer, int size)
 						strncpy(sptr[si]->b_data, buffer, size);
 						cout<<"in write single pointer ending"<<sptr[si]->b_data<<endl;
 						buffer+=size;
-						inode_list[i_no].file_size+=size;
-						size -= size;
-						
+						inode_list[i_no].file_size+=size;						
 						return 1;
 					}
 					si++;
@@ -673,7 +671,7 @@ int my_write(int fd, char* buffer, int size)
 					if(size>=block_size)
 					{
 						strncpy(dsptr[dsi]->b_data, buffer, block_size);
-						cout<<"in write double pointer "<<dsptr[dsi]->b_data<<endl;
+						// cout<<"in write double pointer "<<dsptr[dsi]->b_data<<endl;
 						buffer+=block_size;
 						size-=block_size;
 						inode_list[i_no].file_size+=block_size;
@@ -683,8 +681,7 @@ int my_write(int fd, char* buffer, int size)
 						strncpy(dsptr[dsi]->b_data, buffer, size);
 						cout<<"in write double pointer ending"<<dsptr[dsi]->b_data<<endl;
 						buffer+=size;
-						size-=size;
-						inode_list[i_no].file_size+=size;
+						inode_list[i_no].file_size+=size;						
 						return 1;
 					}
 					dsi++;
@@ -696,7 +693,7 @@ int my_write(int fd, char* buffer, int size)
 					if(size >= block_size)
 					{
 						strncpy(dsptr[dsi]->b_data, buffer, block_size);
-						cout<<"in write double pointer "<<dsptr[dsi]->b_data<<endl;
+						// cout<<"in write double pointer "<<dsptr[dsi]->b_data<<endl;
 						buffer+=block_size;
 						size-=block_size;
 						inode_list[i_no].file_size+=block_size;
@@ -706,7 +703,6 @@ int my_write(int fd, char* buffer, int size)
 						strncpy(dsptr[dsi]->b_data, buffer, size);
 						cout<<"in write double pointer ending "<<dsptr[dsi]->b_data<<endl;
 						buffer+=size;
-						size-=size;
 						inode_list[i_no].file_size+=size;
 						return 1;
 					}
@@ -965,9 +961,11 @@ int main()
 	int fd = my_open("abc.txt");
 	cout<<"fd of file is "<<fd<<endl;
 	int size = my_write(fd,buffer,strlen(buffer));
+	cout<<size<<endl;
 	memset(buffer,'\0',size);
-	// size = my_read(fd,buffer,560);
-	// cout<<buffer<<endl;
+	size = my_read(fd,buffer, size);
+
+	cout<<buffer<<endl;
 	// cout<<size<<endl;
 	// my_cat(fd);
 	// my_copy(fd,"abc.txt");
