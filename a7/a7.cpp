@@ -184,6 +184,7 @@ int my_read(int fd, char *buf, int size)
 	cout<<"file size = "<<inode_list[i_no].file_size<<endl;
 	int j=0;
 	int ret = 0;
+	size = inode_list[i_no].file_size<size?inode_list[i_no].file_size:size;
 	while(j < 5 && size >= block_size)
 	{
 		// cout<<"here"<<endl;
@@ -191,8 +192,9 @@ int my_read(int fd, char *buf, int size)
 		{
 			return ret;
 		}
+		cout<<"size = "<<size<<endl;
 		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,block_size);
-		cout<<buf<<endl;
+		cout<<"in read direct pointer "<<buf<<endl;
 		j++;
 		size = size - block_size;
 		ret += block_size;
@@ -202,7 +204,8 @@ int my_read(int fd, char *buf, int size)
 		// cout<<"buf in here "<<endl;
 		cout<<inode_list[i_no].dir_ptr[j]->b_data<<endl;
 		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,size);
-		cout<<buf<<endl;
+		size -= size;
+		cout<<"in read direct pointer ending"<<buf<<endl;
 		ret += size;
 	}
 	if(j>=5 && size)
@@ -216,18 +219,22 @@ int my_read(int fd, char *buf, int size)
 		sptr = (block**)inode_list[i_no].single_ptr->b_data;
 		while(j< block_size/sizeof(int) && size>=block_size)
 		{
+			cout<<"size = "<<size<<endl;
 			if(sptr[j]==NULL)
 			{
 				return ret;
 			}
 			strncat(buf,sptr[j]->b_data,block_size);
+			cout<<"in read single pointer "<<buf<<endl;
 			j++;
 			size = size - block_size;
 			ret += block_size;
+
 		}
 		if(j<block_size/sizeof(int) && size<block_size)
 		{
 			strncat(buf,sptr[j]->b_data,size);
+			cout<<"in read single pointer ending"<<buf<<endl;
 			ret += size;
 		}
 	}
@@ -256,6 +263,7 @@ int my_read(int fd, char *buf, int size)
 					return ret;
 				}
 				strncat(buf,dsptr[k]->b_data,block_size);
+				cout<<"in read double pointer "<<buf<<endl;
 				j++;
 				size = size - block_size;
 				ret += block_size;
@@ -265,6 +273,7 @@ int my_read(int fd, char *buf, int size)
 		if(j<block_size/sizeof(int) && k< block_size/sizeof(int) && size<block_size)
 		{
 			strncat(buf,dsptr[k]->b_data,size);
+			cout<<"in read double pointer ending"<<buf<<endl;
 			ret += size;
 		}
 	}
@@ -353,14 +362,33 @@ directory* check_valid_directory( char* name)
 
 directory* get_parent( char* path)
 {
-	char *file;
-	char *word = strtok(path, "/");
-	char *current;
+	char *file = (char*)malloc(sizeof(char)*50);
+	// char *path = (char*)path1;
+	int i;
+	int fl = 0;
+	for(i=0;i<strlen(path);i++)
+	{
+		if(path[i]=='/')
+		{
+			fl = 1;
+			break;
+		}
+	}
+	char *word;
+	if(fl == 1)
+	{
+		word = strtok(path, "/");
+	}
+	else
+	{
+		word = NULL;
+	}
+	strcpy(file,path);
+	char *current = (char*)malloc(sizeof(char)*200);
 	strcpy(current, cwd);
-	char *parent;
+	char *parent= (char*)malloc(sizeof(char)*200);
 	strcpy(parent, cwd);
-	int count=0;
-
+	int count = 0;
 	while(word!=NULL)
 	{
 		if(count==0)
@@ -410,8 +438,9 @@ int my_open(char* path)
 	char *file = (char*)malloc(sizeof(char)*50);
 	// char *path = (char*)path1;
 	int i;
-	int fl = 0;
-	for(i=0;i<strlen(path);i++)
+	int fl = 1;
+	cout<<"here "<<strlen(path)<<endl;
+	for(i=0;i<strlen(path)-1;i++)
 	{
 		if(path[i]=='/')
 		{
@@ -422,18 +451,22 @@ int my_open(char* path)
 	char *word;
 	if(fl == 1)
 	{
-		word = strtok(path, "/");
+		cout<<path;
+		// word = strtok(path, "/");
+		cout<<"word = "<<word<<endl;
 	}
 	else
 	{
 		word = NULL;
+		strcpy(file,path);
 	}
-	strcpy(file,path);
 	char *current = (char*)malloc(sizeof(char)*200);
 	strcpy(current, cwd);
 	char *parent= (char*)malloc(sizeof(char)*200);
 	strcpy(parent, cwd);
 	int count = 0;
+	cout<<"parent "<<parent<<endl;
+	cout<<"current "<<current<<endl;
 	while(word!=NULL)
 	{
 		if(count==0)
@@ -518,7 +551,7 @@ int my_open(char* path)
 	{
 		for(k=0 ; k<block_size/16 ; k++)
 		{
-			if(cur_dir->r[k].inode_no==-1)
+			if(cur_dir->r[k].inode_no==-2)
 			{
 				flag1=1;
 				break;
@@ -733,10 +766,11 @@ int my_mkdir( char* path)
 	directory dir;
 	char* fpath;
 	fpath = strdup(cwd);
+	dir.d_name = (char*)malloc(sizeof(char)*50);
 	strcpy(dir.d_name,  strcat(fpath, path));
 
 	dir.dot = &dir;
-	dir.ddot = get_parent(path);
+	dir.ddot = get_parent(fpath);
 
 	if(dir.ddot==NULL)
 		return -1;
@@ -754,6 +788,7 @@ int my_mkdir( char* path)
 		temp[k].inode_no = -1;
 	}
 	dir_list.push_back(&dir);
+	// cout<<dir_list[0]
 	return 1;
 
 }
@@ -961,7 +996,8 @@ int main()
 	strcpy(buffer,"The data blocks of a file are maintained using index nodes or i-nodes. Each i-node will contain information about the data blocks, and will include 5 direct pointers, 1 singly indirect pointer, and 1 doubly indirect pointer. Each pointer will be 32 bits in size, and will indicate a block number. It will also store a type field indicating whether the file is a regular file or a directory, and file size in bytes. The i-nodes will be stored in Block-1 and Block-2, in increasing order of their numbers (i.e. i-node-0 first, followed by i-node-1, and so on).");
 	init();
 	cout<<"buffer length: "<<strlen(buffer)<<endl;
-	int fd = my_open("abc.txt");
+	int success = my_mkdir("myfolder");
+	int fd = my_open("myfolder/abc.txt");
 	cout<<"fd of file is "<<fd<<endl;
 	int size = my_write(fd,buffer,strlen(buffer));
 	memset(buffer,'\0',size);
@@ -970,7 +1006,9 @@ int main()
 	cout<<buffer<<endl;
 	cout<<size<<endl;
 	my_cat(fd);
-	// my_copy(fd,"abc.txt");
+	my_copy(fd,"abc.txt");
+	
+	cout<<success<<endl;
 	// size = my_read(fd,buffer,60);
 	// cout<<"reading 60 bytes\n"<<buffer<<endl;
 	// cout<<strlen(buffer)<<endl;
