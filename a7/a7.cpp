@@ -2,13 +2,12 @@
 #include <string.h>
 #include <bits/stdc++.h>
 #include <unistd.h>
-#include <string.h>
 #include <fcntl.h> 
 
 using namespace std;
 #define SIZE 64
-int file_system_size, block_size;
-int no_of_blocks = file_system_size/block_size;
+int file_system_size = 1024, block_size = 64;
+int no_of_blocks = (int)file_system_size/block_size;
 char cwd[50] = "root";
 // block* freeblockptr;
 int fd=0;
@@ -46,7 +45,7 @@ typedef struct
 	// file size = -1 inode is empty
 	int file_size;
 }inode;
-//16 bytes
+// 16 bytes
 
 typedef struct
 {
@@ -76,17 +75,97 @@ typedef struct open_file
 
 vector<block*> *freeblockptr;
 superblock *sb;
-vector<block*> &freeptr = *(sb->freeblockptr);
+vector<block*> freeptr; 
 open_file* open_file_list;
-
+block *file_system;
 inode *inode_list;
 
 directory root_direc;
 vector<directory*> dir_list;
 
 
+int find_free_inode()
+{
+	for(int i=0; i<2*block_size/sizeof(inode) ;i++)
+	{
+		if(inode_list[i].file_size==-2)
+		{
+			cout<<"inode in free list"<<i<<endl;
+			return i;
+		}
+	}
+	return -1;
+}
+
+block* find_free_block()
+{
+	block* temp;
+	while(1)
+	{
+		if(sb->freeblockptr->empty()==true)
+		{
+			printf("No free blocks\n");
+			return 0;
+		}
+		else
+		{
+			temp = freeptr.front();
+			freeptr.erase(freeptr.begin());
+
+			return temp;
+		}
+	}
+	// cout<<"free block returned"<<endl;
+	// return free_ptr;
+}
+
+
+void init()
+{
+	cout<<sizeof(inode)<<endl;
+
+	file_system = (block*)malloc(sizeof(block)*no_of_blocks);
+
+	sb = (superblock*)malloc(sizeof(superblock));
+	sb = (superblock*)&file_system[0];
+	inode_list = (inode*)malloc(sizeof(inode)*(2*block_size/sizeof(inode)));
+	int i;
+	for(i=0;i<2*block_size/sizeof(inode) ;i++)
+	{
+		inode_list[i].file_size = -2; // empty
+	}
+	// inode_list = (inode*)&file_system[1];  	
+	sb->freeblockptr= new vector<block*>;
+	for(i=0; i<no_of_blocks; i++)
+	{
+		sb->freeblockptr->push_back(&file_system[i]);
+	}
+	freeptr = *(sb->freeblockptr);
+	// create root direc
+	root_direc.d_name = (char*)malloc(sizeof(char)*50);
+	strcpy(root_direc.d_name, "root");
+	root_direc.dot = &root_direc;
+	root_direc.ddot = NULL;
+	// i = find_free_inode();
+	inode_list[i].type = 1;
+	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
+	inode_list[i].file_size=-1; 
+
+	root_direc.r = (record*)(inode_list[i].single_ptr);
+	record* rtemp = root_direc.r;
+	int k, n=1;
+	for(k=0;k< n*block_size/16; k++)
+	{
+		rtemp[k].inode_no = -1;
+	}
+	dir_list.push_back(&root_direc);
+
+}
+
+
 int my_read(int fd, char *buf, int size)
 {
+	cout<<"in my read"<<endl;
 	open_file *temp;
 	temp = open_file_list;
 	int flag=0;
@@ -104,88 +183,95 @@ int my_read(int fd, char *buf, int size)
 		cout<<"error file doesnt exist"<<endl;
 		return -1;
 	}
+	cout<<"got open file"<<endl;
 	int i_no = temp->inode_no;
+	cout<<"inode no = "<<i_no<<endl;
 	int j=0;
 	int ret = 0;
-	while(j < 5 && size>=block_size)
+	while(j < 5 && size >= block_size)
 	{
+		cout<<"here"<<endl;
 		if(inode_list[i_no].dir_ptr[j]==NULL)
 		{
 			return ret;
 		}
 		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,block_size);
+		cout<<buf<<endl;
 		j++;
 		size = size - block_size;
 		ret += block_size;
 	}
 	if(j<5 && size < block_size)
 	{
+		cout<<"buf in here "<<endl;
+		cout<<inode_list[i_no].dir_ptr[j]->b_data<<endl;
 		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,size);
+		cout<<buf<<endl;
 		ret += size;
 	}
-	if(j>=5 && size)
-	{
-		j = 0;
-		block** sptr;
-		if(inode_list[i_no].single_ptr==NULL)
-		{
-			return ret;
-		}
-		sptr = (block**)inode_list[i_no].single_ptr->b_data;
-		while(j< block_size/sizeof(int) && size>=block_size)
-		{
-			if(sptr[j]==NULL)
-			{
-				return ret;
-			}
-			strncat(buf,sptr[j]->b_data,block_size);
-			j++;
-			size = size - block_size;
-			ret += block_size;
-		}
-		if(j<block_size/sizeof(int) && size<block_size)
-		{
-			strncat(buf,sptr[j]->b_data,size);
-			ret += size;
-		}
-	}
-	if(j>=block_size/sizeof(int) && size)
-	{
-		j = 0;
-		int k = 0;
-		block** dptr;
-		block** dsptr;
-		if(inode_list[i_no].double_ptr==NULL)
-		{
-			return ret;
-		}
-		while(j<block_size/sizeof(int) && size>=block_size)
-		{
-			dptr = (block**)inode_list[i_no].double_ptr->b_data;	
-			if(dptr[j]==NULL)
-			{
-				return ret;
-			}
-			dsptr = (block**)dptr[j]->b_data;
-			while(k<block_size/sizeof(int) && size>=block_size)
-			{
-				if(dsptr[k]==NULL)
-				{
-					return ret;
-				}
-				strncat(buf,dsptr[k]->b_data,block_size);
-				j++;
-				size = size - block_size;
-				ret += block_size;
-			}
+	// if(j>=5 && size)
+	// {
+	// 	j = 0;
+	// 	block** sptr;
+	// 	if(inode_list[i_no].single_ptr==NULL)
+	// 	{
+	// 		return ret;
+	// 	}
+	// 	sptr = (block**)inode_list[i_no].single_ptr->b_data;
+	// 	while(j< block_size/sizeof(int) && size>=block_size)
+	// 	{
+	// 		if(sptr[j]==NULL)
+	// 		{
+	// 			return ret;
+	// 		}
+	// 		strncat(buf,sptr[j]->b_data,block_size);
+	// 		j++;
+	// 		size = size - block_size;
+	// 		ret += block_size;
+	// 	}
+	// 	if(j<block_size/sizeof(int) && size<block_size)
+	// 	{
+	// 		strncat(buf,sptr[j]->b_data,size);
+	// 		ret += size;
+	// 	}
+	// }
+	// if(j>=block_size/sizeof(int) && size)
+	// {
+	// 	j = 0;
+	// 	int k = 0;
+	// 	block** dptr;
+	// 	block** dsptr;
+	// 	if(inode_list[i_no].double_ptr==NULL)
+	// 	{
+	// 		return ret;
+	// 	}
+	// 	while(j<block_size/sizeof(int) && size>=block_size)
+	// 	{
+	// 		dptr = (block**)inode_list[i_no].double_ptr->b_data;	
+	// 		if(dptr[j]==NULL)
+	// 		{
+	// 			return ret;
+	// 		}
+	// 		dsptr = (block**)dptr[j]->b_data;
+	// 		while(k<block_size/sizeof(int) && size>=block_size)
+	// 		{
+	// 			if(dsptr[k]==NULL)
+	// 			{
+	// 				return ret;
+	// 			}
+	// 			strncat(buf,dsptr[k]->b_data,block_size);
+	// 			j++;
+	// 			size = size - block_size;
+	// 			ret += block_size;
+	// 		}
 
-		}
-		if(j<block_size/sizeof(int) && k< block_size/sizeof(int) && size<block_size)
-		{
-			strncat(buf,dsptr[k]->b_data,size);
-			ret += size;
-		}
-	}
+	// 	}
+	// 	if(j<block_size/sizeof(int) && k< block_size/sizeof(int) && size<block_size)
+	// 	{
+	// 		strncat(buf,dsptr[k]->b_data,size);
+	// 		ret += size;
+	// 	}
+	// }
 	return ret;
 
 }
@@ -226,6 +312,7 @@ int my_copy(int fd,char *path)
 
 int my_cat(int fd)
 {
+	cout<<"my_cat"<<endl;
 	open_file *temp;
 	temp = open_file_list;
 	int flag=0;
@@ -249,20 +336,12 @@ int my_cat(int fd)
 	buf = (char*)malloc(sizeof(char)*file_size);
 	my_read(fd,buf,file_size);
 	cout<<buf<<endl;
-	
+	return 1;
 }
 
-int find_free_inode()
-{
-	for(int i=0; i<2*block_size/sizeof(inode) ;i++)
-	{
-		if(inode_list[i].file_size==-2)
-			return i;
-	}
-	return -1;
-}
 
-directory* check_valid_directory(char* name)
+
+directory* check_valid_directory( char* name)
 {
 	for(int i=0; i<dir_list.size();i++)
 	{
@@ -274,28 +353,8 @@ directory* check_valid_directory(char* name)
 	return NULL;
 }
 
-block* find_free_block()
-{
-	block* temp;
-	while(1)
-	{
-		if(sb->freeblockptr->empty()==true)
-		{//empty
-			printf("No free blocks\n");
-			return 0;
-		}
-		else
-		{
-			temp = freeptr.front();
-			freeptr.erase(freeptr.begin());
-			return temp;
-		}
-	}
-	// cout<<"free block returned"<<endl;
-	// return free_ptr;
-}
 
-directory* get_parent(char* path)
+directory* get_parent( char* path)
 {
 	char *file;
 	char *word = strtok(path, "/");
@@ -350,11 +409,32 @@ directory* get_parent(char* path)
 
 int my_open(char* path)
 {
+	cout<<"in my open"<<endl;
 	char *file;
-	char *word = strtok(path, "/");
-	char *current;
+	// char *path = (char*)path1;
+	int i;
+	int fl = 0;
+	for(i=0;i<strlen(path);i++)
+	{
+		if(path[i]=='/')
+		{
+			fl = 1;
+			break;
+		}
+	}
+	char *word;
+	if(fl == 1)
+	{
+		word = strtok(path, "/");
+	}
+	else
+	{
+		word = NULL;
+	}
+	strcpy(file,path);
+	char *current = (char*)malloc(sizeof(char)*200);
 	strcpy(current, cwd);
-	char *parent;
+	char *parent= (char*)malloc(sizeof(char)*200);
 	strcpy(parent, cwd);
 	int count = 0;
 	while(word!=NULL)
@@ -457,8 +537,9 @@ int my_open(char* path)
 
 int my_write(int fd, char* buffer, int size)
 {
+	cout<<"in my write"<<endl;
 	int i_no = -1, di=0, si=0, ddi=0, dsi=0;
-	open_file* temp=open_file_list;
+	open_file* temp = open_file_list;
 	while(temp!=NULL)
 	{
 		if(temp->fd ==fd)
@@ -475,12 +556,15 @@ int my_write(int fd, char* buffer, int size)
 			break;
 		if(inode_list[i_no].dir_ptr[di++] == NULL)
 		{
-			inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));			
+			// inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));
+			cout<<"here\n";
+			inode_list[i_no].dir_ptr[di] = find_free_block();			
 			inode_list[i_no].dir_ptr[di]->b_data = (char*)malloc(sizeof(char)*block_size);
-
+			cout<<"here\n";
 			if(size >= block_size)
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
+				cout<<"in write "<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				buffer+=block_size;
 				size-=block_size;
 				inode_list[i_no].file_size+=block_size;
@@ -488,7 +572,8 @@ int my_write(int fd, char* buffer, int size)
 			else if( size>0 && size<block_size )
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, size);
-				inode_list[i_no].file_size+=size;
+				cout<<"in write "<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
+				inode_list[i_no].file_size += size;
 				size=0;
 				return 1;
 			}
@@ -628,7 +713,7 @@ int my_write(int fd, char* buffer, int size)
 
 
 
-int mkdir(char* path)
+int my_mkdir( char* path)
 {
 	directory dir;
 	char* fpath;
@@ -658,7 +743,7 @@ int mkdir(char* path)
 
 }
 
-int chdir(char* path)
+int my_chdir( char* path)
 {//full path
 	if(check_valid_directory(path))
 	{
@@ -669,7 +754,7 @@ int chdir(char* path)
 		return 0;
 }
 
-int my_rmdir(char* path)
+int my_rmdir( char* path)
 {
 	vector<directory*>::iterator it;
 	if(check_valid_directory(path))
@@ -824,49 +909,54 @@ int my_close(int fd)
 }
 
 
-void init()
+
+
+void readinput(char* buffer, int len)
 {
-	block *file_system = (block*)malloc(sizeof(block)*no_of_blocks);
-
-	sb = (superblock*)malloc(sizeof(superblock));
-	sb = (superblock*)&file_system[0];
-
-	inode_list = (inode*)malloc(sizeof(inode)*(2*block_size/sizeof(inode)));
-	for(int i=0;i<2*block_size/sizeof(inode) ;i++)
+	char c;
+	int i=0;
+	while(i<len-1)
 	{
-		inode_list[i].file_size=-2; // empty
-	}
-
-	sb->freeblockptr= new vector<block*>;
-	block* temp;
-	for(int i=0; i<no_of_blocks; i++)
-	{
-		sb->freeblockptr->push_back(&file_system[i]);
-	}
-
-	// create root direc
-	strcpy(root_direc.d_name, "root");
-	root_direc.dot = &root_direc;
-	root_direc.ddot = NULL;
-	int i = find_free_inode();
-	inode_list[i].type = 1;
-	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
-	inode_list[i].file_size=-1; 
-
-	root_direc.r = (record*)(inode_list[i].single_ptr);
-	record* rtemp = root_direc.r;
-	int k, n=1;
-	for(k=0;k< n*block_size/16; k++)
-	{
-		rtemp[k].inode_no = -1;
-	}
-	dir_list.push_back(&root_direc);
-
+		scanf("%c", &c);
+		// cout<<(int)c<<" ";
+		// cout<<c;
+		if(c=='\n')
+		{
+			break;
+		}
+		buffer[i++]=c;
+	}	
+	buffer[i]='\0';
+	// cin.ignore();
+	// cin.clear();
+	cin.sync();
+	// cout<<"returned"<<endl;
+	return;
 }
 
 int main()
 {
-
-	// how to typecast inode list to two blocks
+	cout<<"in main"<<endl;
+	char *buffer;
+	buffer = (char*)malloc(sizeof(char)*150);
+	cout<<"enter buffer"<<endl;
+	// scanf("%s",buffer);
+	readinput(buffer, 150);
+	// // scanf("%[^\n]%*c",buffer);
+	cout<<"entered buffer is = "<<buffer<<endl;
+	init();
+	cout<<strlen(buffer)<<endl;
+	int fd = my_open("abc.txt");
+	cout<<"fd of file is "<<fd<<endl;
+	int size = my_write(fd,buffer,strlen(buffer));
+	size = my_read(fd,buffer,60);
+	cout<<buffer<<endl;
+	cout<<size<<endl;
+	my_cat(fd);
+	// size = my_read(fd,buffer,60);
+	// cout<<"reading 60 bytes\n"<<buffer<<endl;
+	// cout<<strlen(buffer)<<endl;
+	// size = my_copy(fd);
+	return 0;
 
 }
