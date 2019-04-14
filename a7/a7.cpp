@@ -6,8 +6,9 @@
 
 using namespace std;
 #define SIZE 64
+#define NOB_FOR_INODE 4
 
-int file_system_size = 2048, block_size = 64;
+int file_system_size = 4096, block_size = 64;
 int no_of_blocks = (int)file_system_size/block_size;
 
 char cwd[50] = "root";
@@ -33,7 +34,8 @@ typedef struct
 	block* single_ptr;
 	block* double_ptr;
 	bool type; //0-file, 1-direc
-	// file size = -1 inode is empty
+	// file size = -2 inode is empty
+	// file size -1 directory
 	int file_size;
 }inode;
 // 16 bytes
@@ -67,17 +69,18 @@ typedef struct open_file
 vector<block*> *freeblockptr;
 superblock *sb;
 vector<block*> freeptr; 
-open_file* open_file_list;
+open_file* open_file_list=NULL;
 block *file_system;
 inode *inode_list;
 
-directory root_direc;
+directory* root_direc;
 vector<directory*> dir_list;
 
 
 int find_free_inode()
 {
-	for(int i=0; i<2*block_size/sizeof(inode) ;i++)
+	// change to 4 block sizes
+	for(int i=0; i<NOB_FOR_INODE*block_size/sizeof(inode) ;i++)
 	{
 		if(inode_list[i].file_size==-2)
 		{
@@ -85,6 +88,7 @@ int find_free_inode()
 				inode_list[i].dir_ptr[j] = NULL;
 			inode_list[i].single_ptr = NULL;
 			inode_list[i].double_ptr = NULL;
+			cout<<"+++++ find freee inode: "<<i<<endl;
 			return i;
 		}
 	}
@@ -123,9 +127,10 @@ void init()
 
 	sb = (superblock*)malloc(sizeof(superblock));
 	sb = (superblock*)&file_system[0];
-	inode_list = (inode*)malloc(sizeof(inode)*(2*block_size/sizeof(inode)));
+	inode_list = (inode*)malloc(sizeof(inode)*(NOB_FOR_INODE*block_size/sizeof(inode)));
 	int i;
-	for(i=0;i<2*block_size/sizeof(inode) ;i++)
+
+	for(i=0;i<NOB_FOR_INODE*block_size/sizeof(inode) ;i++)
 	{
 		inode_list[i].file_size = -2; // empty
 	}
@@ -137,23 +142,27 @@ void init()
 	}
 	freeptr = *(sb->freeblockptr);
 	// create root direc
-	root_direc.d_name = (char*)malloc(sizeof(char)*50);
-	strcpy(root_direc.d_name, "root");
-	root_direc.dot = &root_direc;
-	root_direc.ddot = NULL;
-	// i = find_free_inode();
+
+	root_direc = new directory;
+	root_direc->d_name = (char*)malloc(sizeof(char)*50);
+	strcpy(root_direc->d_name, "root");
+	root_direc->dot = root_direc;
+	root_direc->ddot = NULL;
+
+	i = find_free_inode();
+	cout<<"root dirc inode "<<i<<"\n";
 	inode_list[i].type = 1;
 	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
 	inode_list[i].file_size=-1; 
 
-	root_direc.r = (record*)(inode_list[i].single_ptr);
-	record* rtemp = root_direc.r;
+	root_direc->r = (record*)(inode_list[i].single_ptr);
+	record* rtemp = root_direc->r;
 	int k, n=1;
 	for(k=0;k< n*block_size/16; k++)
 	{
 		rtemp[k].inode_no = -1;
 	}
-	dir_list.push_back(&root_direc);
+	dir_list.push_back(root_direc);
 
 }
 
@@ -346,11 +355,14 @@ int my_cat(int fd)
 
 directory* check_valid_directory( char* name)
 {
+	cout<<"Check Vaild Dir: "<<name<<"\n";
 	for(int i=0; i<dir_list.size();i++)
 	{
-		if(strcmp(dir_list[i]->d_name, name) ==0)
+		if(dir_list[i]->d_name)
 		{
-			return dir_list[i];		
+			cout<<i<<" " <<dir_list[i]->d_name<<"\n";
+			if(strcmp(dir_list[i]->d_name, name) ==0)
+				return dir_list[i];		
 		}
 	}
 	return NULL;
@@ -362,9 +374,9 @@ directory* get_parent( char* path)
 	char *file = (char*)malloc(sizeof(char)*100);
 	char *word = strtok(path, "/");
 	char *current = (char*)malloc(sizeof(char)*100);
-	strcpy(current, cwd);
+	// strcpy(current, cwd);
 	char *parent = (char*)malloc(sizeof(char)*100);
-	strcpy(parent, cwd);
+	// strcpy(parent, cwd);
 	int count=0;
 
 	while(word!=NULL)
@@ -375,7 +387,7 @@ directory* get_parent( char* path)
 		}
 		else if(count==1)
 		{
-			strcat(current,"/");
+			// strcat(current,"/");
 			strcat(current,file);
 			if(!check_valid_directory(current))
 			{
@@ -399,6 +411,8 @@ directory* get_parent( char* path)
 		count++;
 		word = strtok(NULL,"/");
 	}
+
+	cout<<"PARENT IS : "<<current<<endl;
 
 	for(int j=0; j<dir_list.size(); j++)
 	{
@@ -480,6 +494,7 @@ int my_open(char* path)
 	// keep file in open dir
 	int flag=0;
 	char* temp;
+
 	cout<<"cwd "<<cwd;
 	temp = strdup(cwd);
 	open_file* tempnode, *prev;
@@ -491,12 +506,14 @@ int my_open(char* path)
 	strcat(temp, path);
 
 	strcpy(node->path ,temp ); //temp has full path now
-	cout<<"+++ "<<node->path<<endl;
+	cout<<"\n+++ file path: "<<node->path<<endl;
+
 	node->fd = fd++;
 	node->next = NULL;
 	if(open_file_list==NULL)
 	{
 		node->inode_no = find_free_inode();
+		cout<<"$$ FILE INODE"<<node->inode_no<<"\n";
 		open_file_list = node;
 	}
 	else
@@ -516,6 +533,7 @@ int my_open(char* path)
 	}
 
 	int i_no = node->inode_no;
+	cout<<"file inode : "<<i_no<<"\n";
 
 	record r;
 	r.inode_no = i_no;
@@ -744,36 +762,48 @@ int my_write(int fd, char* buffer, int size)
 
 int my_mkdir( char* path)
 {
-	directory dir;
-	dir.d_name = (char*)malloc(sizeof(char)*100);
+	// directory dir;
+	directory* dir = new directory;
+	dir->d_name = (char*)malloc(sizeof(char)*100);
+	memset(dir->d_name, 0, sizeof(dir->d_name));
+
 	char* fpath;
 	fpath = strdup(cwd);
 	strcat(fpath, "/");
 	strcat(fpath, path);
+	cout<<fpath<<endl;
 
-	strcpy(dir.d_name,  fpath);
+	strcpy(dir->d_name, fpath);
+	cout<<"+++dirname "<<dir->d_name<<endl;
+	// dir.dot = &dir;
+	dir->ddot = get_parent(fpath);
 
-	cout<<"+++dirname "<<dir.d_name<<endl;
-	dir.dot = &dir;
-	dir.ddot = get_parent(fpath);
-
-	if(dir.ddot==NULL)
+	if(dir->ddot==NULL)
+	{
+		printf("directory not created\n");
 		return -1;
+	}
 
 	int i = find_free_inode();
+	cout<<"mkdir inode: "<<path<< " "<<i<<"\n";
 	inode_list[i].type = 1;
 	inode_list[i].single_ptr = find_free_block();// given 1 block, give size, using only single ptr to store records
 	inode_list[i].file_size=-1;
 
-	dir.r = (record*)(inode_list[i].single_ptr);
-	record* temp = dir.r;
+	dir->r = (record*)(inode_list[i].single_ptr);
+	record* temp = dir->r;
 	int k, n=1;
 	for(k=0;k< n*block_size/16; k++)
 	{
 		temp[k].inode_no = -1;
 	}
 
-	dir_list.push_back(&dir);
+	cout<<"$#$ "<<dir->d_name<<"\n";
+
+	dir_list.push_back(dir);
+
+	cout<<dir_list[1]->d_name<<endl;
+	cout<<"dir size "<<dir_list.size()<<"\n";
 	return 1;
 
 }
@@ -783,7 +813,7 @@ int my_chdir( char* path)
 	if(check_valid_directory(path))
 	{
 		strcpy(cwd, path);
-		cout<<"changed dir to "<<cwd<<"\n";
+		cout<<"$$$ changed dir to "<<cwd<<"\n";
 		return 1;
 	}
 	else
@@ -987,6 +1017,8 @@ int main()
 
 	my_mkdir("anusha");
 	my_chdir("root/anusha");
+
+	cout<<cwd<<"\n";
 	int fd1 = my_open("abc.txt");
 	cout<<"fd of file is "<<fd1<<endl;
 	strcpy(buffer, "hello world");
