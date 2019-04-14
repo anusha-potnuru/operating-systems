@@ -82,6 +82,10 @@ int find_free_inode()
 		if(inode_list[i].file_size==-2)
 		{
 			cout<<"inode in free list"<<i<<endl;
+			for(int j=0; j<5; j++)
+				inode_list[i].dir_ptr[j] = NULL;
+			inode_list[i].single_ptr = NULL;
+			inode_list[i].double_ptr = NULL;
 			return i;
 		}
 	}
@@ -104,7 +108,7 @@ block* find_free_block()
 			cout<<"here\n";
 			temp = freeptr.front();
 			freeptr.erase(freeptr.begin());
-			cout<<temp->id;
+			// cout<<temp->id;
 			return temp;
 		}
 	}
@@ -544,7 +548,7 @@ int my_write(int fd, char* buffer, int size)
 		}
 		temp=temp->next;
 	}
-
+	cout<<"inode_no "<<i_no<<endl;
 	while(size > 0)
 	{
 		if(di==5)
@@ -559,6 +563,7 @@ int my_write(int fd, char* buffer, int size)
 			if(size >= block_size)
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
+				cout<<"length stored "<<strlen(inode_list[i_no].dir_ptr[di]->b_data)<<endl;
 				cout<<"in write direct pointer "<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				buffer+=block_size;
 				size-=block_size;
@@ -575,6 +580,7 @@ int my_write(int fd, char* buffer, int size)
 			di++;
 		}	
 	}
+	cout<<"direct ptr done"<<endl;
 	if(di==5)
 	{//single ptr
 		block** sptr;
@@ -612,8 +618,9 @@ int my_write(int fd, char* buffer, int size)
 						strncpy(sptr[si]->b_data, buffer, size);
 						cout<<"in write single pointer ending"<<sptr[si]->b_data<<endl;
 						buffer+=size;
-						size -= size;
 						inode_list[i_no].file_size+=size;
+						size -= size;
+						
 						return 1;
 					}
 					si++;
@@ -938,7 +945,9 @@ void readinput(char* buffer, int len)
 int main()
 {
 	cout<<"enter filesize and block_size"<<endl;
-	cin>>file_system_size>>block_size;
+	// cin>>file_system_size>>block_size;
+	file_system_size = INT_MAX;
+	block_size = 64;
 
 	// how to typecast inode list to two blocks
 
@@ -949,7 +958,7 @@ int main()
 	// scanf("%s",buffer);
 	// readinput(buffer, 150);
 	// // scanf("%[^\n]%*c",buffer);
-	strcpy(buffer,"nice tutorial nice tutorial 28 nice tutorial nice tutorial 56 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial 28 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial");
+	strcpy(buffer, "The data blocks of a file are maintained using index nodes or i-nodes. Each i-node will contain information about the data blocks, and will include 5 direct pointers, 1 singly indirect pointer, and 1 doubly indirect pointer. Each pointer will be 32 bits in size, and will indicate a block number. It will also store a type field indicating whether the file is a regular file or a directory, and file size in bytes. The i-nodes will be stored in Block-1 and Block-2, in increasing order of their numbers (i.e. i-node-0 first, followed by i-node-1, and so on).");
 	// cout<<"entered buffer is = "<<buffer<<endl;
 	init();
 	cout<<"buffer length: "<<strlen(buffer)<<endl;
