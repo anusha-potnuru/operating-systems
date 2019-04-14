@@ -81,7 +81,7 @@ int find_free_inode()
 	{
 		if(inode_list[i].file_size==-2)
 		{
-			cout<<"inode in free list"<<i<<endl;
+			cout<<"inode in free list "<<i<<endl;
 			return i;
 		}
 	}
@@ -90,7 +90,7 @@ int find_free_inode()
 
 block* find_free_block()
 {
-	cout<<"in find free blocks"<<endl;
+	// cout<<"in find free blocks"<<endl;
 	block* temp;
 	while(1)
 	{
@@ -101,10 +101,9 @@ block* find_free_block()
 		}
 		else
 		{
-			cout<<"here\n";
+			// cout<<"here\n";
 			temp = freeptr.front();
 			freeptr.erase(freeptr.begin());
-			cout<<temp->id;
 			return temp;
 		}
 	}
@@ -184,7 +183,7 @@ int my_read(int fd, char *buf, int size)
 	int ret = 0;
 	while(j < 5 && size >= block_size)
 	{
-		cout<<"here"<<endl;
+		// cout<<"here"<<endl;
 		if(inode_list[i_no].dir_ptr[j]==NULL)
 		{
 			return ret;
@@ -197,7 +196,7 @@ int my_read(int fd, char *buf, int size)
 	}
 	if(j<5 && size < block_size)
 	{
-		cout<<"buf in here "<<endl;
+		// cout<<"buf in here "<<endl;
 		cout<<inode_list[i_no].dir_ptr[j]->b_data<<endl;
 		strncat(buf,inode_list[i_no].dir_ptr[j]->b_data,size);
 		cout<<buf<<endl;
@@ -552,10 +551,10 @@ int my_write(int fd, char* buffer, int size)
 		if(inode_list[i_no].dir_ptr[di] == NULL)
 		{
 			// inode_list[i_no].dir_ptr[di] = (block*)malloc(sizeof(block));
-			cout<<"here\n";
+			// cout<<"here\n";
 			inode_list[i_no].dir_ptr[di] = find_free_block();			
 			inode_list[i_no].dir_ptr[di]->b_data = (char*)malloc(sizeof(char)*block_size);
-			cout<<"here\n";
+			// cout<<"here\n";
 			if(size >= block_size)
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, block_size);
@@ -563,12 +562,14 @@ int my_write(int fd, char* buffer, int size)
 				buffer+=block_size;
 				size-=block_size;
 				inode_list[i_no].file_size+=block_size;
+				cout<<inode_list[i_no].file_size<<endl;
 			}
 			else if( size>0 && size<block_size )
 			{
 				strncpy(inode_list[i_no].dir_ptr[di]->b_data, buffer, size);
 				cout<<"in write direct pointer ending"<<inode_list[i_no].dir_ptr[di]->b_data<<endl;
 				inode_list[i_no].file_size += size;
+				cout<<inode_list[i_no].file_size<<endl;
 				size=0;
 				return 1;
 			}
@@ -606,14 +607,17 @@ int my_write(int fd, char* buffer, int size)
 						buffer+=block_size;
 						size -= block_size;
 						inode_list[i_no].file_size+=block_size;
+						cout<<inode_list[i_no].file_size<<endl;
 					}
 					else if(size>0 && size<block_size)
 					{
 						strncpy(sptr[si]->b_data, buffer, size);
 						cout<<"in write single pointer ending"<<sptr[si]->b_data<<endl;
 						buffer+=size;
-						size -= size;
+						
 						inode_list[i_no].file_size+=size;
+						cout<<inode_list[i_no].file_size<<endl;
+						size -= size;
 						return 1;
 					}
 					si++;
@@ -670,6 +674,7 @@ int my_write(int fd, char* buffer, int size)
 						buffer+=block_size;
 						size-=block_size;
 						inode_list[i_no].file_size+=block_size;
+						cout<<inode_list[i_no].file_size<<endl;
 					}
 					else if(size>0 && size<block_size)
 					{
@@ -678,6 +683,7 @@ int my_write(int fd, char* buffer, int size)
 						buffer+=size;
 						size-=size;
 						inode_list[i_no].file_size+=size;
+						cout<<inode_list[i_no].file_size<<endl;
 						return 1;
 					}
 					dsi++;
@@ -693,6 +699,7 @@ int my_write(int fd, char* buffer, int size)
 						buffer+=block_size;
 						size-=block_size;
 						inode_list[i_no].file_size+=block_size;
+						cout<<inode_list[i_no].file_size<<endl;
 					}
 					else if(size>0 && size<block_size)
 					{
@@ -701,6 +708,7 @@ int my_write(int fd, char* buffer, int size)
 						buffer+=size;
 						size-=size;
 						inode_list[i_no].file_size+=size;
+						cout<<inode_list[i_no].file_size<<endl;
 						return 1;
 					}
 					
@@ -937,8 +945,8 @@ void readinput(char* buffer, int len)
 
 int main()
 {
-	cout<<"enter filesize and block_size"<<endl;
-	cin>>file_system_size>>block_size;
+	// cout<<"enter filesize and block_size"<<endl;
+	// cin>>file_system_size>>block_size;
 
 	// how to typecast inode list to two blocks
 
@@ -949,7 +957,8 @@ int main()
 	// scanf("%s",buffer);
 	// readinput(buffer, 150);
 	// // scanf("%[^\n]%*c",buffer);
-	strcpy(buffer,"nice tutorial nice tutorial 28 nice tutorial nice tutorial 56 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial 28 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial");
+	// strcpy(buffer,"nice tutorial nice tutorial 28 nice tutorial nice tutorial 56 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial 28 nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial nice tutorial");
+	strcpy(buffer,"The data blocks of a file are maintained using index nodes or i-nodes. Each i-node will contain information about the data blocks, and will include 5 direct pointers, 1 singly indirect pointer, and 1 doubly indirect pointer. Each pointer will be 32 bits in size, and will indicate a block number. It will also store a type field indicating whether the file is a regular file or a directory, and file size in bytes. The i-nodes will be stored in Block-1 and Block-2, in increasing order of their numbers (i.e. i-node-0 first, followed by i-node-1, and so on).");
 	// cout<<"entered buffer is = "<<buffer<<endl;
 	init();
 	cout<<"buffer length: "<<strlen(buffer)<<endl;
@@ -957,10 +966,11 @@ int main()
 	cout<<"fd of file is "<<fd<<endl;
 	int size = my_write(fd,buffer,strlen(buffer));
 	memset(buffer,'\0',size);
-	// size = my_read(fd,buffer,560);
-	// cout<<buffer<<endl;
-	// cout<<size<<endl;
-	// my_cat(fd);
+	size = my_read(fd,buffer,590);
+	cout<<"buffer read\n";
+	cout<<buffer<<endl;
+	cout<<size<<endl;
+	my_cat(fd);
 	// my_copy(fd,"abc.txt");
 	// size = my_read(fd,buffer,60);
 	// cout<<"reading 60 bytes\n"<<buffer<<endl;
